@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Upload — SecureVault{% endblock %}
+{% block content %}
+<div class="card upload-card reveal">
+    <div class="upload-header">
+        <div class="security-badge"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0-12-4 4m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div><h1>Protect a new file</h1><p>Encrypt it before it enters your vault.</p></div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <label for="file">Choose your file</label>
+        <div class="dropzone">
+            <input id="file" type="file" name="file" required>
+            <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V5m0 0L8 9m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <strong>Drop a file here or browse</strong>
+            <div class="helper">Maximum file size: 10 MB</div>
+            <div class="file-selected"></div>
+        </div>
+
+        <label for="encryption_password">Encryption password</label>
+        <div class="password-wrap">
+            <input id="encryption_password" type="password" name="encryption_password" minlength="8" placeholder="Create a password for this file" required>
+            <button class="toggle-password" type="button" data-target="encryption_password" aria-label="Show password">◉</button>
+        </div>
+        <small>Remember this password. It is required to decrypt and download the file later.</small>
+
+        <div class="security-note"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9.5 15 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong>AES-256-GCM protected.</strong> Your original file is encrypted before it is permanently stored.</span></div>
+
+        <button class="button" type="submit">Encrypt &amp; secure file <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <a class="button secondary" href="{{ url_for('dashboard') }}">Back to vault</a>
+    </form>
+</div>
+{% endblock %}
