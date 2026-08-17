@@ -16,6 +16,7 @@
                 <th>File</th>
                 <th>Size</th>
                 <th>Uploaded</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -24,6 +25,7 @@
                 <td>{{ file.original_filename }}</td>
                 <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
                 <td>{{ file.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><a href="{{ url_for('download', file_id=file.id) }}">Download</a></td>
             </tr>
         {% endfor %}
         </tbody>
