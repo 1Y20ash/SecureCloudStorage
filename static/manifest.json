@@ -1,7 +1,7 @@
 {
   "name": "SecureVault — Private Cloud Vault",
   "short_name": "SecureVault",
-  "description": "Privacy-first cloud file storage with client-side authenticated encryption.",
+  "description": "Privacy-first cloud file storage with AES-256-GCM authenticated encryption.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,15 +10,9 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/static/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/static/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/static/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
