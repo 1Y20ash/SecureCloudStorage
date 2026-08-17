@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#FAFBFA">
+    <meta name="theme-color" content="#00A86B">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SecureVault">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
     <title>{% block title %}SecureVault — Private Cloud Vault{% endblock %}</title>
 
     <!-- Bootstrap 5.3 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qG9W8tD5yJ5p2Jw5Q5l5r5M5r5M5r5" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/ui.js') }}" defer></script>
 </head>
@@ -16,26 +23,14 @@
         <div class="nav-inner container-fluid px-0">
             <a class="brand navbar-brand" href="{{ url_for('home') }}">
                 <div class="brand-logo">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L3.5 6V11C3.5 16.52 7.12 21.64 12 23C16.88 21.64 20.5 16.52 20.5 11V6L12 2Z" fill="url(#brand-grad)" stroke="#00A86B" stroke-width="1.8" stroke-linejoin="round"/>
-                        <circle cx="12" cy="10.5" r="2.2" fill="#00A86B"/>
-                        <path d="M12 12.7V16" stroke="#00A86B" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="12" cy="16" r="0.8" fill="#087443"/>
-                        <defs><linearGradient id="brand-grad" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stop-color="#E6F6F0" stop-opacity="0.95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.8"/></linearGradient></defs>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3.5 6V11C3.5 16.52 7.12 21.64 12 23C16.88 21.64 20.5 16.52 20.5 11V6L12 2Z" fill="url(#brand-grad)" stroke="#00A86B" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="10.5" r="2.2" fill="#00A86B"/><path d="M12 12.7V16" stroke="#00A86B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="0.8" fill="#087443"/><defs><linearGradient id="brand-grad" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stop-color="#E6F6F0" stop-opacity="0.95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.8"/></linearGradient></defs></svg>
                 </div>
                 <span class="brand-text">Secure<span class="brand-accent">Vault</span><span class="brand-dot">.</span></span>
             </a>
-
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#secureVaultNav" aria-controls="secureVaultNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#secureVaultNav" aria-controls="secureVaultNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse justify-content-end" id="secureVaultNav">
                 <div class="nav-links navbar-nav align-items-lg-center">
-                    {% if current_user.is_authenticated %}
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Vault</a>
-                    {% endif %}
+                    {% if current_user.is_authenticated %}<a class="nav-link" href="{{ url_for('dashboard') }}">Vault</a>{% endif %}
                     <a class="nav-link section-nav-link" href="{{ url_for('home') }}#how-it-works">How it works</a>
                     <a class="nav-link section-nav-link" href="{{ url_for('home') }}#security">Security</a>
                     {% if current_user.is_authenticated %}
@@ -43,66 +38,22 @@
                         <div class="nav-user ms-lg-2"><span class="nav-avatar">{{ current_user.name[0]|upper }}</span><span>{{ current_user.name.split(' ')[0] }}</span></div>
                         <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                     {% else %}
-                        <a class="nav-link" href="{{ url_for('login') }}">Sign in</a>
-                        <a class="nav-cta ms-lg-2" href="{{ url_for('register') }}">Create vault ↑</a>
+                        <a class="nav-link" href="{{ url_for('login') }}">Sign in</a><a class="nav-cta ms-lg-2" href="{{ url_for('register') }}">Create vault ↑</a>
                     {% endif %}
                 </div>
             </div>
         </div>
     </nav>
-
     <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-container">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }} alert {% if category == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center gap-2" role="alert">
-                            <span>{% if category == 'success' %}✓{% else %}⚠️{% endif %}</span><span>{{ message }}</span>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-container">{% for category, message in messages %}<div class="flash {{ category }} alert {% if category == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center gap-2" role="alert"><span>{% if category == 'success' %}✓{% else %}⚠️{% endif %}</span><span>{{ message }}</span></div>{% endfor %}</div>{% endif %}{% endwith %}
         {% block content %}{% endblock %}
     </main>
-
-    <footer class="footer">
-        <div class="footer-inner">
-            <div class="footer-brand-wrap">
-                <a class="brand" href="{{ url_for('home') }}">
-                    <div class="brand-logo">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2L3.5 6V11C3.5 16.52 7.12 21.64 12 23C16.88 21.64 20.5 16.52 20.5 11V6L12 2Z" fill="url(#footer-brand-grad)" stroke="#00A86B" stroke-width="1.8" stroke-linejoin="round"/>
-                            <circle cx="12" cy="10.5" r="2.2" fill="#00A86B"/><path d="M12 12.7V16" stroke="#00A86B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="0.8" fill="#087443"/>
-                            <defs><linearGradient id="footer-brand-grad" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stop-color="#E6F6F0" stop-opacity="0.95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.8"/></linearGradient></defs>
-                        </svg>
-                    </div>
-                    <span class="brand-text">Secure<span class="brand-accent">Vault</span><span class="brand-dot">.</span></span>
-                </a>
-                <p class="footer-desc">Privacy-first cloud file storage with AES-256-GCM authenticated encryption and zero plain-text disk storage.</p>
-            </div>
-            <div class="footer-links-group">
-                <div class="footer-col">
-                    <span class="footer-heading">Navigation</span>
-                    <a class="footer-link" href="{{ url_for('home') }}">Home</a>
-                    {% if current_user.is_authenticated %}
-                        <a class="footer-link" href="{{ url_for('dashboard') }}">Vault Dashboard</a><a class="footer-link" href="{{ url_for('upload') }}">Upload File</a>
-                    {% else %}
-                        <a class="footer-link" href="{{ url_for('login') }}">Sign in</a><a class="footer-link" href="{{ url_for('register') }}">Create Vault</a>
-                    {% endif %}
-                    <a class="footer-link section-nav-link" href="{{ url_for('home') }}#how-it-works">How it works</a><a class="footer-link section-nav-link" href="{{ url_for('home') }}#security">Security</a>
-                </div>
-                <div class="footer-col">
-                    <span class="footer-heading">Connect &amp; Developer</span>
-                    <a class="footer-link social-link" href="https://www.linkedin.com/in/1y2ash" target="_blank" rel="noopener noreferrer"><span>LinkedIn / 1y2ash</span></a>
-                    <a class="footer-link social-link" href="https://github.com/1Y20ash/SecureCloudStorage" target="_blank" rel="noopener noreferrer"><span>GitHub Repository</span></a>
-                </div>
-            </div>
-        </div>
-        <div class="footer-bottom"><div class="footer-bottom-inner"><span>© 2026 <strong>Yash Chitmalwar</strong>. All rights reserved.</span><span class="footer-credit">Designed &amp; Developed by <strong>Yash Chitmalwar</strong></span></div></div>
-    </footer>
-
-    <!-- Bootstrap JavaScript bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYpT0nXf8b0f6h2e6g5x5c5v5r5M5r5" crossorigin="anonymous"></script>
+    <footer class="footer"><div class="footer-inner"><div class="footer-brand-wrap"><a class="brand" href="{{ url_for('home') }}"><div class="brand-logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3.5 6V11C3.5 16.52 7.12 21.64 12 23C16.88 21.64 20.5 16.52 20.5 11V6L12 2Z" fill="url(#footer-brand-grad)" stroke="#00A86B" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="10.5" r="2.2" fill="#00A86B"/><path d="M12 12.7V16" stroke="#00A86B" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="0.8" fill="#087443"/><defs><linearGradient id="footer-brand-grad" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stop-color="#E6F6F0" stop-opacity="0.95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.8"/></linearGradient></defs></svg></div><span class="brand-text">Secure<span class="brand-accent">Vault</span><span class="brand-dot">.</span></span></a><p class="footer-desc">Privacy-first cloud file storage with AES-256-GCM authenticated encryption and zero plain-text disk storage.</p></div><div class="footer-links-group"><div class="footer-col"><span class="footer-heading">Navigation</span><a class="footer-link" href="{{ url_for('home') }}">Home</a>{% if current_user.is_authenticated %}<a class="footer-link" href="{{ url_for('dashboard') }}">Vault Dashboard</a><a class="footer-link" href="{{ url_for('upload') }}">Upload File</a>{% else %}<a class="footer-link" href="{{ url_for('login') }}">Sign in</a><a class="footer-link" href="{{ url_for('register') }}">Create Vault</a>{% endif %}<a class="footer-link section-nav-link" href="{{ url_for('home') }}#how-it-works">How it works</a><a class="footer-link section-nav-link" href="{{ url_for('home') }}#security">Security</a></div><div class="footer-col"><span class="footer-heading">Connect &amp; Developer</span><a class="footer-link social-link" href="https://www.linkedin.com/in/1y2ash" target="_blank" rel="noopener noreferrer"><span>LinkedIn / 1y2ash</span></a><a class="footer-link social-link" href="https://github.com/1Y20ash/SecureCloudStorage" target="_blank" rel="noopener noreferrer"><span>GitHub Repository</span></a></div></div></div><div class="footer-bottom"><div class="footer-bottom-inner"><span>© 2026 <strong>Yash Chitmalwar</strong>. All rights reserved.</span><span class="footer-credit">Designed &amp; Developed by <strong>Yash Chitmalwar</strong></span></div></div></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('{{ url_for('static', filename='sw.js') }}').catch(() => {}));
+      }
+    </script>
 </body>
 </html>
