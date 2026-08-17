@@ -80,9 +80,6 @@ def read_encrypted_file(filename):
         return supabase.storage.from_(SUPABASE_STORAGE_BUCKET).download(filename)
 
     encrypted_path = os.path.join(UPLOAD_FOLDER, filename)
-    if not os.path.isfile(encrypted_path):
-        raise FileNotFoundError(encrypted_path)
-
     with open(encrypted_path, "rb") as encrypted_file:
         return encrypted_file.read()
 
@@ -257,14 +254,14 @@ def download(file_id):
     try:
         encrypted_data = read_encrypted_file(stored_file.encrypted_filename)
         decrypted_data = decrypt_file(encrypted_data, decryption_password)
+    except FileNotFoundError:
+        flash("The encrypted file is missing from storage.", "error")
+        return redirect(url_for("dashboard"))
     except InvalidTag:
         flash("Incorrect password or corrupted file. Decryption failed.", "error")
         return render_template("download.html", file=stored_file)
-    except (FileNotFoundError, ValueError, OSError):
-        flash("The encrypted file is missing or could not be decrypted.", "error")
-        return redirect(url_for("dashboard"))
-    except Exception:
-        flash("The file could not be retrieved from storage.", "error")
+    except (ValueError, OSError):
+        flash("The file could not be decrypted.", "error")
         return render_template("download.html", file=stored_file)
 
     return send_file(
@@ -296,6 +293,9 @@ def delete_file(file_id):
         db.session.delete(stored_file)
         db.session.commit()
         flash(f"{filename} was deleted successfully.", "success")
+    except OSError:
+        db.session.rollback()
+        flash("The encrypted file could not be deleted from storage.", "error")
     except Exception:
         db.session.rollback()
         flash("The file could not be deleted.", "error")
@@ -311,9 +311,8 @@ def logout():
     return redirect(url_for("home"))
 
 
-with app.app_context():
-    db.create_all()
-
+# Do not call db.create_all() during Vercel cold starts.
+# The database schema should be created once in Supabase SQL Editor.
 
 if __name__ == "__main__":
     app.run(debug=True)
