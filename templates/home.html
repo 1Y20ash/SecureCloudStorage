@@ -1,34 +1,131 @@
 {% extends "base.html" %}
-{% block title %}SecureVault — Private cloud storage{% endblock %}
+{% block title %}SecureVault — Private Cloud Vault & AES-256 Encryption{% endblock %}
+
 {% block content %}
-<section class="hero reveal">
-    <span class="eyebrow"><span class="pulse-dot"></span> Privacy-first file storage</span>
-    <h1>Store privately.<br><span class="gradient-text">Stay in control.</span></h1>
-    <p>SecureVault encrypts your files with AES-256-GCM before they are stored. Your private files stay protected from the moment they leave your device.</p>
+<!-- HERO SECTION -->
+<section class="hero reveal is-visible">
+    <span class="eyebrow">
+        <span class="eyebrow-dot"></span>
+        Privacy-first cloud storage
+    </span>
+    <h1>Store privately.<br><span class="accent-text">Stay in control.</span></h1>
+    <p>SecureVault encrypts your files with AES-256-GCM before storage. Your private files remain protected from the moment they leave your device.</p>
     <div class="hero-actions">
         <a class="button" href="{{ url_for('register') }}">
-            Create your secure vault
-            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Create your secure vault →
         </a>
         <a class="button secondary" href="{{ url_for('login') }}">Sign in</a>
     </div>
 </section>
 
-<section class="feature-grid">
-    <article class="feature reveal delay-1">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 14v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>AES-256-GCM encryption</h3>
-        <p>Files are encrypted before storage with authenticated encryption for confidentiality and integrity.</p>
-    </article>
-    <article class="feature reveal delay-2">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>Private by design</h3>
-        <p>Each account can access only its own files, with passwords stored as secure hashes.</p>
-    </article>
-    <article class="feature reveal delay-3">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0-12-4 4m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>Simple & effortless</h3>
-        <p>Upload, protect, manage and download your files from one calm, distraction-free dashboard.</p>
-    </article>
+<!-- INTERACTIVE ENCRYPTION FLOW VISUALIZATION -->
+<section class="encryption-demo-section reveal delay-1">
+    <div class="encryption-demo-card">
+        <span class="eyebrow">Interactive Security Pipeline</span>
+        <h2>AES-256-GCM Encryption Flow</h2>
+        <p style="color: var(--muted); font-size: 13px; margin: 4px 0 0;">Watch how your readable document is transformed into authenticated ciphertext before saving.</p>
+
+        <div class="demo-pipeline">
+            <div class="pipeline-box">
+                <div class="pipeline-icon">📄</div>
+                <div class="pipeline-title">project.pdf</div>
+                <div class="pipeline-sub">2.4 MB · Plaintext</div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="pipeline-box active">
+                <div class="pipeline-icon">🔐</div>
+                <div class="pipeline-title">AES-256-GCM</div>
+                <div class="pipeline-sub">600k PBKDF2 Iterations</div>
+            </div>
+
+            <div class="pipeline-arrow">→</div>
+
+            <div class="ciphertext-stream" id="ciphertext-stream">
+                8F3A91B4C9D2...E82D<br>
+                A91F4288002F...9B1C<br>
+                7C12D8FA901B...44A2
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW SECUREVAULT WORKS -->
+<section id="how-it-works" class="reveal delay-2">
+    <div class="section-title-wrap">
+        <span class="eyebrow">Architectural Design</span>
+        <h2>How SecureVault Works</h2>
+        <p>Four transparent steps to protect your sensitive documents with industry-standard cryptography.</p>
+    </div>
+
+    <div class="steps-grid">
+        <div class="step-card">
+            <span class="step-number">01</span>
+            <h3>Choose your file</h3>
+            <p>Select any PDF, photo, document, or archive file from your computer.</p>
+        </div>
+
+        <div class="step-card">
+            <span class="step-number">02</span>
+            <h3>Encrypt</h3>
+            <p>AES-256-GCM encrypts your file using a unique 16-byte salt and 12-byte nonce.</p>
+        </div>
+
+        <div class="step-card">
+            <span class="step-number">03</span>
+            <h3>Store</h3>
+            <p>Only encrypted ciphertext is stored in isolated disk storage. Zero plain-text leaks.</p>
+        </div>
+
+        <div class="step-card">
+            <span class="step-number">04</span>
+            <h3>Retrieve</h3>
+            <p>Authenticate into your vault, enter your decryption key, and stream your original file.</p>
+        </div>
+    </div>
+</section>
+
+<!-- BUILT FOR PRIVACY (SECURITY CHECKLIST) -->
+<section id="security" class="reveal delay-3">
+    <div class="section-title-wrap">
+        <span class="eyebrow">Security Principles</span>
+        <h2>Built For Privacy</h2>
+        <p>Every layer of SecureVault is designed for cryptographic confidentiality and file integrity.</p>
+    </div>
+
+    <div class="security-grid">
+        <div class="security-item">
+            <div class="security-check">✓</div>
+            <div class="security-item-text">
+                <h4>AES-256-GCM Authenticated Encryption</h4>
+                <p>Galois/Counter Mode ensures both data confidentiality and tamper verification.</p>
+            </div>
+        </div>
+
+        <div class="security-item">
+            <div class="security-check">✓</div>
+            <div class="security-item-text">
+                <h4>Zero Plain-Text File Persistence</h4>
+                <p>Files are encrypted in memory before disk write operations occur.</p>
+            </div>
+        </div>
+
+        <div class="security-item">
+            <div class="security-check">✓</div>
+            <div class="security-item-text">
+                <h4>Isolated Account Vaults</h4>
+                <p>Database foreign keys strict-scope file queries exclusively to the logged-in owner.</p>
+            </div>
+        </div>
+
+        <div class="security-item">
+            <div class="security-check">✓</div>
+            <div class="security-item-text">
+                <h4>Cryptographic Nonces &amp; PBKDF2</h4>
+                <p>Keys are derived via PBKDF2HMAC-SHA256 with 600,000 hashing rounds for resilience.</p>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

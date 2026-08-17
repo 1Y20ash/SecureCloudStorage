@@ -1,61 +1,138 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — SecureVault{% endblock %}
+{% block title %}Vault Dashboard — SecureVault{% endblock %}
+
 {% block content %}
-<div class="dashboard-header reveal">
+<!-- DASHBOARD HEADER & GREETING -->
+<div class="dashboard-header reveal is-visible">
     <div>
-        <span class="eyebrow"><span class="pulse-dot"></span> Vault is ready</span>
-        <h1>Good to see you, {{ current_user.name.split(' ')[0] }}.</h1>
-        <p>Your encrypted workspace, all in one place.</p>
+        <span class="eyebrow"><span class="eyebrow-dot"></span> Vault Active</span>
+        <h1 id="dynamic-greeting" class="greeting-title" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1>
+        <p class="greeting-subtitle">Your private cloud vault for encrypted files.</p>
     </div>
-    <div class="user-chip"><span class="avatar">{{ current_user.name[0]|upper }}</span>{{ current_user.name }}</div>
-</div>
 
-<div class="stat-grid">
-    <div class="stat reveal delay-1">
-        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8h16v11H4V8Zm3-4h5l2 4H7V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-        <div class="stat-label">Protected files</div>
-        <div class="stat-value">{{ files|length }}</div>
-    </div>
-    <div class="stat reveal delay-2">
-        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <div class="stat-label">Protection</div>
-        <div class="stat-value">AES-256</div>
-    </div>
-    <div class="stat reveal delay-3">
-        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-        <div class="stat-label">Vault status</div>
-        <div class="stat-value">Secure</div>
-    </div>
-</div>
-
-<div class="card files-card reveal">
-    <div class="files-head">
-        <div>
-            <h2>My encrypted files</h2>
-            <span class="helper">Only you can access your stored files.</span>
+    <div class="vault-metrics">
+        {% set total_bytes = namespace(val=0) %}
+        {% for f in files %}
+            {% set total_bytes.val = total_bytes.val + f.file_size %}
+        {% endfor %}
+        <div class="metric-item">
+            <span class="metric-value">{{ files|length }}</span>
+            <span class="metric-label">files stored</span>
         </div>
-        <a class="button" href="{{ url_for('upload') }}">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Upload file
-        </a>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+            <span class="metric-value">{{ "%.1f"|format(total_bytes.val / 1024 / 1024) }} MB</span>
+            <span class="metric-label">protected</span>
+        </div>
+        <a class="button" href="{{ url_for('upload') }}">Upload a file ↑</a>
+    </div>
+</div>
+
+<!-- SCROLL STORYTELLING PIPELINE SECTIONS -->
+<div class="story-sections">
+    <div class="story-card reveal delay-1">
+        <div class="story-content">
+            <div class="story-number">Section 01 · File Preparation</div>
+            <h3>Everything starts here</h3>
+            <p>Select any document or asset. SecureVault buffers your file in volatile memory and prompts for a client encryption password before writing to disk.</p>
+        </div>
+        <div class="story-visual">
+            <div class="visual-node">
+                <div class="visual-node-icon">📄</div>
+                <span class="visual-label">Original File</span>
+                <span class="visual-sub">Plaintext</span>
+            </div>
+            <div class="visual-arrow">→</div>
+            <div class="visual-node">
+                <div class="visual-node-icon accent">🔐</div>
+                <span class="visual-label">Pre-encryption</span>
+                <span class="visual-sub">In Memory</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="story-card reveal delay-2">
+        <div class="story-content">
+            <div class="story-number">Section 02 · Cryptographic Transformation</div>
+            <h3>Encrypted before storage</h3>
+            <p>Your file never touches storage as readable plain text. Key derivation via PBKDF2 with 600k rounds creates a 256-bit key for AES-GCM encryption.</p>
+        </div>
+        <div class="story-visual">
+            <div class="visual-node">
+                <div class="visual-node-icon">📄</div>
+                <span class="visual-label">Plaintext</span>
+                <span class="visual-sub">Original</span>
+            </div>
+            <div class="visual-arrow">→</div>
+            <div class="visual-node">
+                <div class="visual-node-icon accent">🔐</div>
+                <span class="visual-label">AES-256</span>
+                <span class="visual-sub">GCM Tag</span>
+            </div>
+            <div class="visual-arrow">→</div>
+            <div class="visual-node">
+                <div class="visual-node-icon dark">📦</div>
+                <span class="visual-label">Ciphertext</span>
+                <span class="visual-sub">Saved</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILE VAULT TABLE -->
+<div class="vault-section reveal delay-3">
+    <div class="vault-header">
+        <div>
+            <h2>My Encrypted Files</h2>
+            <p>Files are cryptographically protected. Actions appear on hover.</p>
+        </div>
+        <a class="button secondary" href="{{ url_for('upload') }}">+ Add File</a>
     </div>
 
     {% if files %}
-    <table class="file-table">
+    <table class="vault-table">
         <thead>
-            <tr><th>File</th><th>Size</th><th>Protected</th><th>Actions</th></tr>
+            <tr>
+                <th>File Name</th>
+                <th>Size</th>
+                <th>Protected On</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
         </thead>
         <tbody>
         {% for file in files %}
             <tr>
-                <td><div class="file-name"><span class="file-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h6m-6 4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>{{ file.original_filename }}</div></td>
+                <td>
+                    <div class="file-cell">
+                        <div class="file-type-icon">
+                            {% if file.original_filename.endswith('.pdf') %}📄
+                            {% elif file.original_filename.endswith(('.jpg','.png','.jpeg','.gif')) %}📷
+                            {% elif file.original_filename.endswith(('.zip','.tar','.gz')) %}📦
+                            {% elif file.original_filename.endswith(('.csv','.xlsx','.xls')) %}📊
+                            {% else %}📁
+                            {% endif %}
+                        </div>
+                        <span>{{ file.original_filename }}</span>
+                    </div>
+                </td>
                 <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
                 <td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td>
                 <td>
-                    <div class="actions">
-                        <a class="icon-button" href="{{ url_for('download', file_id=file.id) }}" title="Download" aria-label="Download {{ file.original_filename }}"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-                        <form method="POST" action="{{ url_for('delete_file', file_id=file.id) }}">
-                            <button class="icon-button danger" type="submit" title="Delete" aria-label="Delete {{ file.original_filename }}" onclick="return confirm('Delete this encrypted file permanently?');"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14m-9-3h4l1 3H9l1-3Zm-3 3 1 13h8l1-13M10 11v7m4-7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <span class="status-badge">
+                        <span class="status-badge-dot"></span>
+                        Encrypted
+                    </span>
+                </td>
+                <td style="text-align: right;">
+                    <div class="row-actions" style="justify-content: flex-end;">
+                        <a class="action-btn download" href="{{ url_for('download', file_id=file.id) }}">
+                            Download →
+                        </a>
+                        <form method="POST" action="{{ url_for('delete_file', file_id=file.id) }}" style="display:inline;">
+                            <button class="action-btn delete" type="submit" onclick="return confirm('Delete this encrypted file permanently?');">
+                                Delete
+                            </button>
                         </form>
                     </div>
                 </td>
@@ -64,12 +141,12 @@
         </tbody>
     </table>
     {% else %}
-        <div class="empty-state">
-            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h6l2 2h8v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 12v4m0-4-2 2m2-2 2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-            <strong>Your vault is empty</strong>
-            <p>Upload your first file and protect it with AES-256-GCM.</p>
-            <a class="button" href="{{ url_for('upload') }}">Upload your first file</a>
-        </div>
+    <div class="empty-vault">
+        <div class="empty-vault-icon">🔒</div>
+        <h3>Your vault is empty</h3>
+        <p>Upload your first file and protect it with AES-256-GCM authenticated encryption.</p>
+        <a class="button" href="{{ url_for('upload') }}">Upload your first file ↑</a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
