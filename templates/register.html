@@ -1,22 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Register - Secure Cloud Storage{% endblock %}
+{% block title %}Create your vault — SecureVault{% endblock %}
 {% block content %}
-<div class="card">
-    <h1>Create Account</h1>
+<div class="card auth-card reveal">
+    <div class="auth-header">
+        <div class="security-badge"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h1>Create your vault</h1>
+        <p>A private place for the files that matter.</p>
+    </div>
     <form method="POST">
-        <label>Name</label>
-        <input type="text" name="name" required>
+        <label for="name">Full name</label>
+        <input id="name" type="text" name="name" placeholder="Your name" autocomplete="name" required>
 
-        <label>Email</label>
-        <input type="email" name="email" required>
+        <label for="email">Email address</label>
+        <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
 
-        <label>Password</label>
-        <input type="password" name="password" minlength="8" required>
+        <label for="password">Password</label>
+        <div class="password-wrap">
+            <input id="password" type="password" name="password" minlength="8" placeholder="At least 8 characters" autocomplete="new-password" required>
+            <button class="toggle-password" type="button" data-target="password" aria-label="Show password">◉</button>
+        </div>
 
-        <label>Confirm Password</label>
-        <input type="password" name="confirm_password" minlength="8" required>
+        <label for="confirm_password">Confirm password</label>
+        <input id="confirm_password" type="password" name="confirm_password" minlength="8" placeholder="Repeat your password" autocomplete="new-password" required>
 
-        <button type="submit">Register</button>
+        <div class="security-note"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Your account password is securely hashed. File encryption passwords are never stored.</span></div>
+        <button class="button" type="submit">Create secure vault</button>
     </form>
+    <p class="form-footer">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
 </div>
 {% endblock %}
