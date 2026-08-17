@@ -14,20 +14,36 @@ from extensions import db, login_manager
 from models.file import StoredFile
 from models.user import User
 
+try:
+    from supabase import create_client
+except ImportError:  # Keeps local development errors clear if the optional dependency is missing.
+    create_client = None
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Encrypted files are kept separately from application data.
-# The directory is created automatically when the application starts.
-UPLOAD_FOLDER = os.path.join(app.root_path, "uploads", "encrypted")
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB for the mini-project
 ALLOWED_EXTENSIONS = {
     "pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
     "jpg", "jpeg", "png", "gif", "zip", "csv"
 }
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+SUPABASE_URL = app.config.get("SUPABASE_URL")
+SUPABASE_SECRET_KEY = app.config.get("SUPABASE_SECRET_KEY")
+SUPABASE_STORAGE_BUCKET = app.config.get("SUPABASE_STORAGE_BUCKET", "encrypted-files")
+USE_SUPABASE_STORAGE = bool(SUPABASE_URL and SUPABASE_SECRET_KEY)
+
+supabase = None
+if USE_SUPABASE_STORAGE:
+    if create_client is None:
+        raise RuntimeError("The supabase package is required when Supabase Storage is configured.")
+    supabase = create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
+else:
+    # Local fallback only. Vercel uses Supabase Storage and never writes to the deployment filesystem.
+    UPLOAD_FOLDER = os.path.join(app.root_path, "uploads", "encrypted")
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 db.init_app(app)
 login_manager.init_app(app)
@@ -40,6 +56,45 @@ def load_user(user_id):
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def store_encrypted_file(filename, encrypted_data):
+    if USE_SUPABASE_STORAGE:
+        supabase.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+            path=filename,
+            file=encrypted_data,
+            file_options={
+                "content-type": "application/octet-stream",
+                "upsert": "false",
+            },
+        )
+        return
+
+    encrypted_path = os.path.join(UPLOAD_FOLDER, filename)
+    with open(encrypted_path, "wb") as encrypted_file:
+        encrypted_file.write(encrypted_data)
+
+
+def read_encrypted_file(filename):
+    if USE_SUPABASE_STORAGE:
+        return supabase.storage.from_(SUPABASE_STORAGE_BUCKET).download(filename)
+
+    encrypted_path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.isfile(encrypted_path):
+        raise FileNotFoundError(encrypted_path)
+
+    with open(encrypted_path, "rb") as encrypted_file:
+        return encrypted_file.read()
+
+
+def delete_encrypted_file(filename):
+    if USE_SUPABASE_STORAGE:
+        supabase.storage.from_(SUPABASE_STORAGE_BUCKET).remove([filename])
+        return
+
+    encrypted_path = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.isfile(encrypted_path):
+        os.remove(encrypted_path)
 
 
 @app.route("/")
@@ -147,11 +202,11 @@ def upload():
 
         encrypted_data = encrypt_file(file_bytes, encryption_password)
         encrypted_filename = f"{secrets.token_hex(16)}.enc"
-        encrypted_path = os.path.join(UPLOAD_FOLDER, encrypted_filename)
+        storage_uploaded = False
 
         try:
-            with open(encrypted_path, "wb") as encrypted_file:
-                encrypted_file.write(encrypted_data)
+            store_encrypted_file(encrypted_filename, encrypted_data)
+            storage_uploaded = True
 
             stored_file = StoredFile(
                 user_id=current_user.id,
@@ -163,8 +218,11 @@ def upload():
             db.session.commit()
         except Exception:
             db.session.rollback()
-            if os.path.exists(encrypted_path):
-                os.remove(encrypted_path)
+            if storage_uploaded:
+                try:
+                    delete_encrypted_file(encrypted_filename)
+                except Exception:
+                    pass
             flash("The file could not be encrypted and stored.", "error")
             return render_template("upload.html")
 
@@ -196,22 +254,17 @@ def download(file_id):
         flash("Please enter the decryption password.", "error")
         return render_template("download.html", file=stored_file)
 
-    encrypted_path = os.path.join(UPLOAD_FOLDER, stored_file.encrypted_filename)
-
-    if not os.path.isfile(encrypted_path):
-        flash("The encrypted file is missing from storage.", "error")
-        return redirect(url_for("dashboard"))
-
     try:
-        with open(encrypted_path, "rb") as encrypted_file:
-            encrypted_data = encrypted_file.read()
-
+        encrypted_data = read_encrypted_file(stored_file.encrypted_filename)
         decrypted_data = decrypt_file(encrypted_data, decryption_password)
     except InvalidTag:
         flash("Incorrect password or corrupted file. Decryption failed.", "error")
         return render_template("download.html", file=stored_file)
-    except (ValueError, OSError):
-        flash("The file could not be decrypted.", "error")
+    except (FileNotFoundError, ValueError, OSError):
+        flash("The encrypted file is missing or could not be decrypted.", "error")
+        return redirect(url_for("dashboard"))
+    except Exception:
+        flash("The file could not be retrieved from storage.", "error")
         return render_template("download.html", file=stored_file)
 
     return send_file(
@@ -236,19 +289,13 @@ def delete_file(file_id):
         flash("File not found.", "error")
         return redirect(url_for("dashboard"))
 
-    encrypted_path = os.path.join(UPLOAD_FOLDER, stored_file.encrypted_filename)
-
     try:
-        if os.path.isfile(encrypted_path):
-            os.remove(encrypted_path)
+        delete_encrypted_file(stored_file.encrypted_filename)
 
         filename = stored_file.original_filename
         db.session.delete(stored_file)
         db.session.commit()
         flash(f"{filename} was deleted successfully.", "success")
-    except OSError:
-        db.session.rollback()
-        flash("The encrypted file could not be deleted from storage.", "error")
     except Exception:
         db.session.rollback()
         flash("The file could not be deleted.", "error")
