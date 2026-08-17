@@ -1,9 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Home - Secure Cloud Storage{% endblock %}
+{% block title %}SecureVault — Private cloud storage{% endblock %}
 {% block content %}
-<section class="hero">
-    <h1>Secure Cloud Storage</h1>
-    <p>Store your files securely with encryption.</p>
-    <a class="button" href="{{ url_for('register') }}">Create Account</a>
+<section class="hero reveal">
+    <span class="eyebrow"><span class="pulse-dot"></span> Privacy-first file storage</span>
+    <h1>Store privately.<br><span class="gradient-text">Stay in control.</span></h1>
+    <p>SecureVault encrypts your files with AES-256-GCM before they are stored. Your private files stay protected from the moment they leave your device.</p>
+    <div class="hero-actions">
+        <a class="button" href="{{ url_for('register') }}">
+            Create your secure vault
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="button secondary" href="{{ url_for('login') }}">Sign in</a>
+    </div>
+</section>
+
+<section class="feature-grid">
+    <article class="feature reveal delay-1">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 14v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>AES-256-GCM encryption</h3>
+        <p>Files are encrypted before storage with authenticated encryption for confidentiality and integrity.</p>
+    </article>
+    <article class="feature reveal delay-2">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>Private by design</h3>
+        <p>Each account can access only its own files, with passwords stored as secure hashes.</p>
+    </article>
+    <article class="feature reveal delay-3">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0-12-4 4m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>Simple & effortless</h3>
+        <p>Upload, protect, manage and download your files from one calm, distraction-free dashboard.</p>
+    </article>
 </section>
 {% endblock %}

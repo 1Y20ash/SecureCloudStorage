@@ -1,16 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Login - Secure Cloud Storage{% endblock %}
+{% block title %}Sign in — SecureVault{% endblock %}
 {% block content %}
-<div class="card">
-    <h1>Login</h1>
+<div class="card auth-card reveal">
+    <div class="auth-header">
+        <div class="security-badge"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 14v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h1>Welcome back</h1>
+        <p>Sign in to your private encrypted vault.</p>
+    </div>
     <form method="POST">
-        <label>Email</label>
-        <input type="email" name="email" required>
+        <label for="email">Email address</label>
+        <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
 
-        <label>Password</label>
-        <input type="password" name="password" required>
+        <label for="password">Password</label>
+        <div class="password-wrap">
+            <input id="password" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+            <button class="toggle-password" type="button" data-target="password" aria-label="Show password">◉</button>
+        </div>
 
-        <button type="submit">Login</button>
+        <button class="button" type="submit">Sign in securely</button>
     </form>
+    <p class="form-footer">New here? <a href="{{ url_for('register') }}">Create your vault</a></p>
 </div>
 {% endblock %}

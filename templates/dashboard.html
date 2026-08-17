@@ -1,9 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Secure Cloud Storage{% endblock %}
+{% block title %}Dashboard — SecureVault{% endblock %}
 {% block content %}
-<div class="card">
-    <h1>Welcome, {{ current_user.name }}</h1>
-    <p>You are logged in successfully.</p>
-    <p>File encryption and cloud storage will be added in the next milestones.</p>
+<div class="dashboard-header reveal">
+    <div>
+        <span class="eyebrow"><span class="pulse-dot"></span> Vault is ready</span>
+        <h1>Good to see you, {{ current_user.name.split(' ')[0] }}.</h1>
+        <p>Your encrypted workspace, all in one place.</p>
+    </div>
+    <div class="user-chip"><span class="avatar">{{ current_user.name[0]|upper }}</span>{{ current_user.name }}</div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat reveal delay-1">
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8h16v11H4V8Zm3-4h5l2 4H7V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <div class="stat-label">Protected files</div>
+        <div class="stat-value">{{ files|length }}</div>
+    </div>
+    <div class="stat reveal delay-2">
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.9 7.7 7 10 4.1-2.3 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="stat-label">Protection</div>
+        <div class="stat-value">AES-256</div>
+    </div>
+    <div class="stat reveal delay-3">
+        <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <div class="stat-label">Vault status</div>
+        <div class="stat-value">Secure</div>
+    </div>
+</div>
+
+<div class="card files-card reveal">
+    <div class="files-head">
+        <div>
+            <h2>My encrypted files</h2>
+            <span class="helper">Only you can access your stored files.</span>
+        </div>
+        <a class="button" href="{{ url_for('upload') }}">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Upload file
+        </a>
+    </div>
+
+    {% if files %}
+    <table class="file-table">
+        <thead>
+            <tr><th>File</th><th>Size</th><th>Protected</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for file in files %}
+            <tr>
+                <td><div class="file-name"><span class="file-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h6m-6 4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>{{ file.original_filename }}</div></td>
+                <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
+                <td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td>
+                <td>
+                    <div class="actions">
+                        <a class="icon-button" href="{{ url_for('download', file_id=file.id) }}" title="Download" aria-label="Download {{ file.original_filename }}"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+                        <form method="POST" action="{{ url_for('delete_file', file_id=file.id) }}">
+                            <button class="icon-button danger" type="submit" title="Delete" aria-label="Delete {{ file.original_filename }}" onclick="return confirm('Delete this encrypted file permanently?');"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14m-9-3h4l1 3H9l1-3Zm-3 3 1 13h8l1-13M10 11v7m4-7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h6l2 2h8v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 12v4m0-4-2 2m2-2 2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <strong>Your vault is empty</strong>
+            <p>Upload your first file and protect it with AES-256-GCM.</p>
+            <a class="button" href="{{ url_for('upload') }}">Upload your first file</a>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
