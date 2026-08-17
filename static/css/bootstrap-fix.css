@@ -1,0 +1,115 @@
+/* Bootstrap compatibility layer for SecureVault custom design */
+/* Loaded after style.css so Bootstrap's responsive behavior is not overridden by legacy custom rules. */
+
+html {
+  zoom: 1;
+  -moz-transform: none;
+  transform: none;
+  transform-origin: initial;
+}
+
+/* Keep Bootstrap's container responsive while preserving SecureVault's desktop width. */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Bootstrap navbar responsive behavior */
+.navbar {
+  height: auto;
+  min-height: 64px;
+}
+
+.navbar .nav-inner {
+  max-width: 1080px;
+  width: 100%;
+  min-height: 64px;
+}
+
+.navbar .navbar-collapse {
+  flex-grow: 0;
+}
+
+.navbar .navbar-nav.nav-links {
+  flex-direction: row;
+}
+
+.navbar .navbar-toggler {
+  display: none;
+}
+
+/* Bootstrap's collapse is authoritative on small screens. */
+@media (max-width: 991.98px) {
+  .navbar {
+    padding: 8px 20px;
+  }
+
+  .navbar .nav-inner {
+    min-height: 48px;
+  }
+
+  .navbar .navbar-toggler {
+    display: block;
+  }
+
+  .navbar .navbar-collapse {
+    width: 100%;
+    padding: 10px 0 4px;
+  }
+
+  .navbar .navbar-nav.nav-links {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 4px;
+  }
+
+  .navbar .navbar-nav .nav-link,
+  .navbar .navbar-nav .nav-cta,
+  .navbar .navbar-nav .nav-user {
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .navbar .navbar-nav .nav-user {
+    padding: 8px 10px;
+  }
+
+  .navbar .navbar-nav .nav-cta {
+    min-height: 40px;
+  }
+}
+
+/* Make Bootstrap buttons/components coexist with the project's custom button class. */
+.btn {
+  font-family: var(--font-sans);
+}
+
+/* Bootstrap form controls should remain usable on narrow screens. */
+.form-control,
+.form-select,
+.form-check-input {
+  max-width: 100%;
+}
+
+/* Bootstrap grid should never create horizontal overflow. */
+.row {
+  --bs-gutter-x: 1.5rem;
+  --bs-gutter-y: 0;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
