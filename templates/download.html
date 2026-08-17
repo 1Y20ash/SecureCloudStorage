@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Decrypt File - Secure Cloud Storage{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Decrypt & Download</h1>
+    <p><strong>File:</strong> {{ file.original_filename }}</p>
+    <p>Enter the password used when this file was encrypted.</p>
+
+    <form method="POST">
+        <label for="decryption_password">Decryption Password</label>
+        <input type="password" id="decryption_password" name="decryption_password" required autofocus>
+        <button type="submit">Decrypt & Download</button>
+    </form>
+
+    <p><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
+</div>
+{% endblock %}
