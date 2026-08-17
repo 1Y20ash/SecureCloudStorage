@@ -15,6 +15,10 @@ class Config:
     # functions are short-lived and Supavisor handles pooling for us.
     SQLALCHEMY_ENGINE_OPTIONS = {
         "poolclass": NullPool,
+        "connect_args": {
+            "sslmode": "require",
+            "connect_timeout": 10,
+        },
     }
 
     SUPABASE_URL = os.getenv("SUPABASE_URL")
