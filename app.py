@@ -16,7 +16,9 @@ from models.user import User
 app = Flask(__name__)
 app.config.from_object(Config)
 
-UPLOAD_FOLDER = os.path.join(app.instance_path, "encrypted")
+# Encrypted files are kept separately from application data.
+# The directory is created automatically when the application starts.
+UPLOAD_FOLDER = os.path.join(app.root_path, "uploads", "encrypted")
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB for the mini-project
 ALLOWED_EXTENSIONS = {
     "pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
