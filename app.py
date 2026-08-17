@@ -222,6 +222,40 @@ def download(file_id):
     )
 
 
+@app.route("/delete/<int:file_id>", methods=["POST"])
+@login_required
+def delete_file(file_id):
+    stored_file = db.session.scalar(
+        db.select(StoredFile).where(
+            StoredFile.id == file_id,
+            StoredFile.user_id == current_user.id,
+        )
+    )
+
+    if stored_file is None:
+        flash("File not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    encrypted_path = os.path.join(UPLOAD_FOLDER, stored_file.encrypted_filename)
+
+    try:
+        if os.path.isfile(encrypted_path):
+            os.remove(encrypted_path)
+
+        filename = stored_file.original_filename
+        db.session.delete(stored_file)
+        db.session.commit()
+        flash(f"{filename} was deleted successfully.", "success")
+    except OSError:
+        db.session.rollback()
+        flash("The encrypted file could not be deleted from storage.", "error")
+    except Exception:
+        db.session.rollback()
+        flash("The file could not be deleted.", "error")
+
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/logout")
 @login_required
 def logout():
