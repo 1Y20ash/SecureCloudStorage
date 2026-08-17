@@ -1,13 +1,15 @@
+import io
 import os
 import secrets
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from cryptography.exceptions import InvalidTag
+from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
 from config import Config
-from crypto.encryption import encrypt_file
+from crypto.encryption import decrypt_file, encrypt_file
 from extensions import db, login_manager
 from models.file import StoredFile
 from models.user import User
@@ -170,6 +172,54 @@ def upload():
         return redirect(url_for("dashboard"))
 
     return render_template("upload.html")
+
+
+@app.route("/download/<int:file_id>", methods=["GET", "POST"])
+@login_required
+def download(file_id):
+    stored_file = db.session.scalar(
+        db.select(StoredFile).where(
+            StoredFile.id == file_id,
+            StoredFile.user_id == current_user.id,
+        )
+    )
+
+    if stored_file is None:
+        flash("File not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "GET":
+        return render_template("download.html", file=stored_file)
+
+    decryption_password = request.form.get("decryption_password", "")
+    if not decryption_password:
+        flash("Please enter the decryption password.", "error")
+        return render_template("download.html", file=stored_file)
+
+    encrypted_path = os.path.join(UPLOAD_FOLDER, stored_file.encrypted_filename)
+
+    if not os.path.isfile(encrypted_path):
+        flash("The encrypted file is missing from storage.", "error")
+        return redirect(url_for("dashboard"))
+
+    try:
+        with open(encrypted_path, "rb") as encrypted_file:
+            encrypted_data = encrypted_file.read()
+
+        decrypted_data = decrypt_file(encrypted_data, decryption_password)
+    except InvalidTag:
+        flash("Incorrect password or corrupted file. Decryption failed.", "error")
+        return render_template("download.html", file=stored_file)
+    except (ValueError, OSError):
+        flash("The file could not be decrypted.", "error")
+        return render_template("download.html", file=stored_file)
+
+    return send_file(
+        io.BytesIO(decrypted_data),
+        as_attachment=True,
+        download_name=stored_file.original_filename,
+        mimetype="application/octet-stream",
+    )
 
 
 @app.route("/logout")
