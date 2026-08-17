@@ -1,17 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Decrypt File - Secure Cloud Storage{% endblock %}
+{% block title %}Decrypt File — SecureVault{% endblock %}
 {% block content %}
-<div class="card">
-    <h1>Decrypt & Download</h1>
-    <p><strong>File:</strong> {{ file.original_filename }}</p>
-    <p>Enter the password used when this file was encrypted.</p>
+<div class="card decrypt-card">
+    <div class="decrypt-header">
+        <div class="security-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 14v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+            <p class="eyebrow">Secure download</p>
+            <h1>Decrypt &amp; Download</h1>
+            <p class="decrypt-subtitle">Enter the password used to protect this file.</p>
+        </div>
+    </div>
 
-    <form method="POST">
-        <label for="decryption_password">Decryption Password</label>
-        <input type="password" id="decryption_password" name="decryption_password" required autofocus>
-        <button type="submit">Decrypt & Download</button>
+    <div class="file-summary">
+        <div class="file-summary-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="file-summary-text">
+            <span>Encrypted file</span>
+            <strong>{{ file.original_filename }}</strong>
+        </div>
+    </div>
+
+    <form method="POST" class="decrypt-form">
+        <label for="decryption_password">Decryption password</label>
+        <div class="password-wrap">
+            <input type="password" id="decryption_password" name="decryption_password" minlength="1" placeholder="Enter your file password" required autofocus>
+            <button class="toggle-password" type="button" data-target="decryption_password" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.7"/></svg>
+            </button>
+        </div>
+        <small>Your password is used to decrypt the file securely. It is never displayed or stored here.</small>
+
+        <div class="security-note">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.6-2.9 8-7 10-4.1-2-7-5.4-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9.5 12 1.7 1.7 3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span><strong>Private &amp; protected.</strong> The decrypted file is sent directly to your browser as a download.</span>
+        </div>
+
+        <button class="button decrypt-button" type="submit">
+            <span>Decrypt &amp; Download</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="button secondary" href="{{ url_for('dashboard') }}">Back to vault</a>
     </form>
-
-    <p><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
 </div>
 {% endblock %}
