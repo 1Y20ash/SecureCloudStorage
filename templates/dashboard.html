@@ -4,7 +4,7 @@
 <div class="card">
     <h1>Welcome, {{ current_user.name }}</h1>
     <p>Manage your securely encrypted files.</p>
-    <p><a href="{{ url_for('upload') }}">Upload a File</a></p>
+    <p><a class="button" href="{{ url_for('upload') }}">Upload a File</a></p>
 </div>
 
 <div class="card">
@@ -16,7 +16,7 @@
                 <th>File</th>
                 <th>Size</th>
                 <th>Uploaded</th>
-                <th>Action</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -25,7 +25,12 @@
                 <td>{{ file.original_filename }}</td>
                 <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
                 <td>{{ file.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td><a href="{{ url_for('download', file_id=file.id) }}">Download</a></td>
+                <td>
+                    <a href="{{ url_for('download', file_id=file.id) }}">Download</a>
+                    <form method="POST" action="{{ url_for('delete_file', file_id=file.id) }}" style="display:inline; margin-left:10px;">
+                        <button type="submit" onclick="return confirm('Delete this encrypted file permanently?');">Delete</button>
+                    </form>
+                </td>
             </tr>
         {% endfor %}
         </tbody>
