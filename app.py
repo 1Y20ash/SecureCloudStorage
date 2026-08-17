@@ -1,5 +1,5 @@
 from flask import Flask, flash, redirect, render_template, request, url_for
-from flask_login import current_user, flash, login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 
 from config import Config
