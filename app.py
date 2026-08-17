@@ -1,14 +1,29 @@
+import os
+import secrets
+
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
+from werkzeug.utils import secure_filename
 
 from config import Config
+from crypto.encryption import encrypt_file
 from extensions import db, login_manager
+from models.file import StoredFile
 from models.user import User
 
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+UPLOAD_FOLDER = os.path.join(app.instance_path, "encrypted")
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB for the mini-project
+ALLOWED_EXTENSIONS = {
+    "pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "jpg", "jpeg", "png", "gif", "zip", "csv"
+}
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 db.init_app(app)
 login_manager.init_app(app)
@@ -17,6 +32,10 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route("/")
@@ -88,7 +107,67 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    files = db.session.scalars(
+        db.select(StoredFile)
+        .where(StoredFile.user_id == current_user.id)
+        .order_by(StoredFile.uploaded_at.desc())
+    ).all()
+    return render_template("dashboard.html", files=files)
+
+
+@app.route("/upload", methods=["GET", "POST"])
+@login_required
+def upload():
+    if request.method == "POST":
+        uploaded_file = request.files.get("file")
+        encryption_password = request.form.get("encryption_password", "")
+
+        if not uploaded_file or not uploaded_file.filename:
+            flash("Please select a file.", "error")
+            return render_template("upload.html")
+
+        if not allowed_file(uploaded_file.filename):
+            flash("This file type is not allowed.", "error")
+            return render_template("upload.html")
+
+        if not encryption_password:
+            flash("An encryption password is required.", "error")
+            return render_template("upload.html")
+
+        original_filename = secure_filename(uploaded_file.filename)
+        file_bytes = uploaded_file.read(MAX_FILE_SIZE + 1)
+
+        if len(file_bytes) > MAX_FILE_SIZE:
+            flash("File size must be 10 MB or less.", "error")
+            return render_template("upload.html")
+
+        encrypted_data = encrypt_file(file_bytes, encryption_password)
+        encrypted_filename = f"{secrets.token_hex(16)}.enc"
+        encrypted_path = os.path.join(UPLOAD_FOLDER, encrypted_filename)
+
+        try:
+            with open(encrypted_path, "wb") as encrypted_file:
+                encrypted_file.write(encrypted_data)
+
+            stored_file = StoredFile(
+                user_id=current_user.id,
+                original_filename=original_filename,
+                encrypted_filename=encrypted_filename,
+                file_size=len(file_bytes),
+            )
+            db.session.add(stored_file)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            if os.path.exists(encrypted_path):
+                os.remove(encrypted_path)
+            flash("The file could not be encrypted and stored.", "error")
+            return render_template("upload.html")
+
+        flash("File encrypted and stored successfully.", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("upload.html")
 
 
 @app.route("/logout")
