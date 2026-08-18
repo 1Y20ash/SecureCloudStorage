@@ -106,46 +106,39 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 8. Install SecureVault popup — home page only, once per browser session.
-  // The versioned key makes the popup available again after this fix is deployed.
+  // Only show the popup when the browser has provided a native install prompt.
   let deferredInstallPrompt = null;
   const installModalElement = document.getElementById("installAppModal");
   const installButton = document.getElementById("installAppButton");
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isHomePage = window.location.pathname === "/";
-  const installShownThisSession = sessionStorage.getItem("secureVaultInstallShown_v2") === "true";
+  const installShownThisSession = sessionStorage.getItem("secureVaultInstallShown_v3") === "true";
+
+  const showInstallModal = () => {
+    if (!installModalElement || isStandalone || !isHomePage || installShownThisSession || !deferredInstallPrompt) return;
+    sessionStorage.setItem("secureVaultInstallShown_v3", "true");
+    if (typeof bootstrap === "undefined") return;
+    bootstrap.Modal.getOrCreateInstance(installModalElement).show();
+  };
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    showInstallModal();
   });
 
-  if (installModalElement && !isStandalone && isHomePage && !installShownThisSession) {
-    const showInstallModal = () => {
-      sessionStorage.setItem("secureVaultInstallShown_v2", "true");
-      if (typeof bootstrap === "undefined") return;
-      const modal = bootstrap.Modal.getOrCreateInstance(installModalElement);
-      modal.show();
-    };
+  if (installButton) {
+    installButton.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
 
-    setTimeout(showInstallModal, 900);
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
 
-    if (installButton) {
-      installButton.addEventListener("click", async () => {
-        if (!deferredInstallPrompt) {
-          installButton.textContent = "Use your browser's Install option";
-          installButton.classList.remove("btn-success");
-          installButton.classList.add("btn-secondary");
-          return;
-        }
-
-        deferredInstallPrompt.prompt();
-        const result = await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-        if (result.outcome === "accepted" && typeof bootstrap !== "undefined") {
-          bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
-        }
-      });
-    }
+      if (result.outcome === "accepted" && typeof bootstrap !== "undefined") {
+        bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
+      }
+    });
   }
 
   window.addEventListener("appinstalled", () => {
