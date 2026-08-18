@@ -6,54 +6,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const updateProgress = () => {
     const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-    if (totalHeight > 0) {
-      const progress = (window.scrollY / totalHeight) * 100;
-      progressBar.style.width = `${progress}%`;
-    }
+    if (totalHeight > 0) progressBar.style.width = `${(window.scrollY / totalHeight) * 100}%`;
   };
   window.addEventListener("scroll", updateProgress, { passive: true });
 
   // 2. IntersectionObserver for Reveal Elements
   const revealElements = document.querySelectorAll(".reveal");
   if (revealElements.length > 0) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
-    );
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) entry.target.classList.add("is-visible");
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
     revealElements.forEach((el) => observer.observe(el));
   }
 
-  // 3. Dynamic Time-Based Greeting Generator
+  // 3. Dynamic Time-Based Greeting
   const greetingElement = document.getElementById("dynamic-greeting");
   if (greetingElement) {
     const hour = new Date().getHours();
-    let timeOfDay = "day";
-    if (hour < 12) timeOfDay = "morning";
-    else if (hour < 17) timeOfDay = "afternoon";
-    else timeOfDay = "evening";
-
-    const userName = greetingElement.dataset.username || "there";
-    greetingElement.textContent = `Good ${timeOfDay}, ${userName}.`;
+    const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+    greetingElement.textContent = `Good ${timeOfDay}, ${greetingElement.dataset.username || "there"}.`;
   }
 
-  // 4. Live AES-256 Ciphertext Animation Stream (Landing Page Demo)
+  // 4. Live AES-256 Ciphertext Animation Stream
   const ciphertextStream = document.getElementById("ciphertext-stream");
   if (ciphertextStream) {
     const hexChars = "0123456789ABCDEF";
-    const generateHex = (length) => {
-      let result = "";
-      for (let i = 0; i < length; i++) {
-        result += hexChars.charAt(Math.floor(Math.random() * hexChars.length));
-      }
-      return result;
-    };
-
+    const generateHex = (length) => Array.from({ length }, () => hexChars[Math.floor(Math.random() * hexChars.length)]).join("");
     setInterval(() => {
       ciphertextStream.textContent = `8F3A91${generateHex(10)}...${generateHex(4)}\n${generateHex(8)}A91F${generateHex(8)}\n7C12${generateHex(12)}`;
     }, 400);
@@ -68,18 +48,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const progressContainer = zone.parentElement.querySelector(".progress-bar-container");
     const progressFill = progressContainer?.querySelector(".progress-bar-fill");
     const progressStatus = progressContainer?.querySelector(".progress-status-text");
-
     if (!input) return;
 
     const handleFileSelection = (file) => {
       if (!file) return;
-
       if (banner && fileNameEl && fileSizeEl) {
         fileNameEl.textContent = file.name;
         fileSizeEl.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
         banner.classList.add("active");
       }
-
       if (progressContainer && progressFill && progressStatus) {
         progressContainer.classList.add("active");
         let progress = 0;
@@ -89,38 +66,18 @@ document.addEventListener("DOMContentLoaded", () => {
             progress = 100;
             clearInterval(interval);
             progressStatus.textContent = "Ready for AES-256 encryption ✓";
-          } else {
-            progressStatus.textContent = `Preparing encryption... ${progress}%`;
-          }
+          } else progressStatus.textContent = `Preparing encryption... ${progress}%`;
           progressFill.style.width = `${progress}%`;
         }, 80);
       }
     };
-
-    input.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
-      handleFileSelection(file);
-    });
-
-    ["dragenter", "dragover"].forEach((evt) => {
-      zone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        zone.classList.add("dragging");
-      });
-    });
-
-    ["dragleave", "drop"].forEach((evt) => {
-      zone.addEventListener(evt, (e) => {
-        e.preventDefault();
-        zone.classList.remove("dragging");
-      });
-    });
-
+    input.addEventListener("change", (e) => handleFileSelection(e.target.files?.[0]));
+    ["dragenter", "dragover"].forEach((evt) => zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.add("dragging"); }));
+    ["dragleave", "drop"].forEach((evt) => zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.remove("dragging"); }));
     zone.addEventListener("drop", (e) => {
-      const files = e.dataTransfer.files;
-      if (files.length) {
-        input.files = files;
-        handleFileSelection(files[0]);
+      if (e.dataTransfer.files.length) {
+        input.files = e.dataTransfer.files;
+        handleFileSelection(e.dataTransfer.files[0]);
       }
     });
   });
@@ -146,5 +103,51 @@ document.addEventListener("DOMContentLoaded", () => {
         submitBtn.style.opacity = "0.75";
       }
     });
+  });
+
+  // 8. Install SecureVault popup on every browser visit.
+  // Browsers control the native install prompt, so we use our own Bootstrap modal.
+  // The native prompt is only requested when the browser provides beforeinstallprompt.
+  let deferredInstallPrompt = null;
+  const installModalElement = document.getElementById("installAppModal");
+  const installButton = document.getElementById("installAppButton");
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+  });
+
+  if (installModalElement && !isStandalone) {
+    const showInstallModal = () => {
+      const modal = bootstrap.Modal.getOrCreateInstance(installModalElement);
+      modal.show();
+    };
+
+    // Give the browser a moment to fire beforeinstallprompt, then show our popup.
+    setTimeout(showInstallModal, 900);
+
+    if (installButton) {
+      installButton.addEventListener("click", async () => {
+        if (!deferredInstallPrompt) {
+          installButton.textContent = "Use your browser's Install option";
+          installButton.classList.remove("btn-success");
+          installButton.classList.add("btn-secondary");
+          return;
+        }
+
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        if (result.outcome === "accepted") {
+          bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
+        }
+      });
+    }
+  }
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    if (installModalElement) bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
   });
 });
