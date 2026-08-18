@@ -106,12 +106,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 8. Install SecureVault popup — home page only, once per browser session.
+  // The versioned key makes the popup available again after this fix is deployed.
   let deferredInstallPrompt = null;
   const installModalElement = document.getElementById("installAppModal");
   const installButton = document.getElementById("installAppButton");
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isHomePage = window.location.pathname === "/";
-  const installShownThisSession = sessionStorage.getItem("secureVaultInstallShown") === "true";
+  const installShownThisSession = sessionStorage.getItem("secureVaultInstallShown_v2") === "true";
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -120,7 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (installModalElement && !isStandalone && isHomePage && !installShownThisSession) {
     const showInstallModal = () => {
-      sessionStorage.setItem("secureVaultInstallShown", "true");
+      sessionStorage.setItem("secureVaultInstallShown_v2", "true");
+      if (typeof bootstrap === "undefined") return;
       const modal = bootstrap.Modal.getOrCreateInstance(installModalElement);
       modal.show();
     };
@@ -139,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
         deferredInstallPrompt.prompt();
         const result = await deferredInstallPrompt.userChoice;
         deferredInstallPrompt = null;
-        if (result.outcome === "accepted") {
+        if (result.outcome === "accepted" && typeof bootstrap !== "undefined") {
           bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
         }
       });
@@ -148,6 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("appinstalled", () => {
     deferredInstallPrompt = null;
-    if (installModalElement) bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
+    if (installModalElement && typeof bootstrap !== "undefined") {
+      bootstrap.Modal.getOrCreateInstance(installModalElement).hide();
+    }
   });
 });
