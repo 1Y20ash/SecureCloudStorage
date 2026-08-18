@@ -16,7 +16,7 @@ from models.user import User
 
 try:
     from supabase import create_client
-except ImportError:  # Keeps local development errors clear if the optional dependency is missing.
+except ImportError:
     create_client = None
 
 
@@ -24,10 +24,6 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB for the mini-project
-ALLOWED_EXTENSIONS = {
-    "pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-    "jpg", "jpeg", "png", "gif", "zip", "csv"
-}
 
 SUPABASE_URL = app.config.get("SUPABASE_URL")
 SUPABASE_SECRET_KEY = app.config.get("SUPABASE_SECRET_KEY")
@@ -40,7 +36,6 @@ if USE_SUPABASE_STORAGE:
         raise RuntimeError("The supabase package is required when Supabase Storage is configured.")
     supabase = create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
 else:
-    # Local fallback only. Vercel uses Supabase Storage and never writes to the deployment filesystem.
     UPLOAD_FOLDER = os.path.join(app.root_path, "uploads", "encrypted")
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -52,10 +47,6 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
-
-
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def store_encrypted_file(filename, encrypted_data):
@@ -182,10 +173,6 @@ def upload():
             flash("Please select a file.", "error")
             return render_template("upload.html")
 
-        if not allowed_file(uploaded_file.filename):
-            flash("This file type is not allowed.", "error")
-            return render_template("upload.html")
-
         if not encryption_password:
             flash("An encryption password is required.", "error")
             return render_template("upload.html")
@@ -310,9 +297,6 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
 
-
-# Do not call db.create_all() during Vercel cold starts.
-# The database schema should be created once in Supabase SQL Editor.
 
 if __name__ == "__main__":
     app.run(debug=True)
