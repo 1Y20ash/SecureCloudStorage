@@ -105,26 +105,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 8. Install SecureVault popup on every browser visit.
-  // Browsers control the native install prompt, so we use our own Bootstrap modal.
-  // The native prompt is only requested when the browser provides beforeinstallprompt.
+  // 8. Install SecureVault popup — home page only, once per browser session.
   let deferredInstallPrompt = null;
   const installModalElement = document.getElementById("installAppModal");
   const installButton = document.getElementById("installAppButton");
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isHomePage = window.location.pathname === "/";
+  const installShownThisSession = sessionStorage.getItem("secureVaultInstallShown") === "true";
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
   });
 
-  if (installModalElement && !isStandalone) {
+  if (installModalElement && !isStandalone && isHomePage && !installShownThisSession) {
     const showInstallModal = () => {
+      sessionStorage.setItem("secureVaultInstallShown", "true");
       const modal = bootstrap.Modal.getOrCreateInstance(installModalElement);
       modal.show();
     };
 
-    // Give the browser a moment to fire beforeinstallprompt, then show our popup.
     setTimeout(showInstallModal, 900);
 
     if (installButton) {
