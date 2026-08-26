@@ -1,4 +1,5 @@
 # Import all models so SQLAlchemy knows about every table during application startup.
+from models.audit_log import AuditLog  # noqa: F401
 from models.case import Case  # noqa: F401
 from models.case_assignment import CaseAssignment  # noqa: F401
 from models.case_document import CaseDocument  # noqa: F401
