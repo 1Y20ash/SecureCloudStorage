@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from extensions import db
+from models.evidence import Evidence
 
 
 class EvidenceCustody(db.Model):
