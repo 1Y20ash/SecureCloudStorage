@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Case Assignments — SecureVault{% endblock %}
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">Case {{ case.case_number }}</span>
+      <h1 class="h2 fw-semibold mb-1">Case Assignments</h1>
+      <p class="text-secondary mb-0">{{ case.title }}</p>
+    </div>
+    <a class="btn btn-outline-secondary rounded-3" href="{{ url_for('case_detail', case_id=case.id) }}">← Back to case</a>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+      <h2 class="h5 mb-1">Assign an authorized stakeholder</h2>
+      <p class="text-secondary small">Assignment grants case access through the deny-by-default authorization layer.</p>
+      <form method="post" class="row g-3 align-items-end">
+        <div class="col-md-8">
+          <label class="form-label">User account</label>
+          <select name="user_id" class="form-select" required>
+            <option value="">Select a user</option>
+            {% for user in available_users %}
+              <option value="{{ user.id }}" {% if user.id in assigned_ids %}disabled{% endif %}>
+                {{ user.name }} — {{ user.email }} — {{ user.role }}{% if user.id in assigned_ids %} (already assigned){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4"><button class="btn btn-success w-100" type="submit">Assign to case</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-0 p-4">
+      <h2 class="h5 mb-1">Current assignments</h2>
+      <p class="text-secondary small mb-0">Removing an assignment removes case-level access; it does not delete the user.</p>
+    </div>
+    {% if assignments %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light"><tr><th class="ps-4">User</th><th>Role</th><th>Assigned by</th><th>Assigned at</th><th class="text-end pe-4">Action</th></tr></thead>
+          <tbody>
+          {% for assignment in assignments %}
+            <tr>
+              <td class="ps-4"><strong>{{ assignment.user.name }}</strong><div class="small text-secondary">{{ assignment.user.email }}</div></td>
+              <td>{{ assignment.user.role }}</td>
+              <td>{{ assignment.assigner.name if assignment.assigner else 'Unknown' }}</td>
+              <td>{{ assignment.assigned_at.strftime('%d %b %Y, %H:%M UTC') }}</td>
+              <td class="text-end pe-4">
+                <form method="post" action="{{ url_for('remove_case_assignment', case_id=case.id, assignment_id=assignment.id) }}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card-body text-center py-5"><h3 class="h6">No stakeholders assigned</h3><p class="text-secondary mb-0">Only the case owner and Admin currently have case access.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

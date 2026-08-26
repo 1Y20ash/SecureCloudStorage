@@ -4,7 +4,7 @@
 <div class="container py-4 py-lg-5">
   <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start mb-4">
     <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">Case {{ case.case_number }}</span><h1 class="h2 fw-semibold mb-1">{{ case.title }}</h1><p class="text-secondary mb-0">{{ case.description or 'No description provided.' }}</p></div>
-    <a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document ↑</a>
+    <div class="d-flex gap-2"><a class="btn btn-outline-success rounded-3" href="{{ url_for('manage_case_assignments', case_id=case.id) }}">Manage assignments</a><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document ↑</a></div>
   </div>
   <div class="row g-3 mb-4">
     <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Status</div><div class="fw-semibold mt-1">{{ case.status }}</div></div></div></div>
@@ -23,6 +23,6 @@
     </tbody></table></div>
     {% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No documents yet</h3><p class="text-secondary">Add the first encrypted document to this case.</p><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document</a></div>{% endif %}
   </div>
-  <div class="alert alert-light border rounded-4 small mb-0">Sharing is deny-by-default. Recipients can only download a document when the share explicitly grants download permission and has not expired.</div>
+  <div class="alert alert-light border rounded-4 small mb-0">Case assignments are explicit and deny-by-default. Assigned users can access the case, while document sharing remains separately controlled and expiring.</div>
 </div>
 {% endblock %}

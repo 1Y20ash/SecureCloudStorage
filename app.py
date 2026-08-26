@@ -10,15 +10,22 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
-from authz import can_access_case, can_download_document, is_admin
+from authz import (
+    can_access_case,
+    can_download_document,
+    can_manage_case,
+    can_manage_case_assignments,
+    is_admin,
+)
 from config import Config
 from crypto.encryption import decrypt_file, encrypt_file
 from extensions import db, login_manager
 from models.case import Case
+from models.case_assignment import CaseAssignment
 from models.case_document import CaseDocument
 from models.document_share import DocumentShare
 from models.file import StoredFile
-from models.user import User
+from models.user import ROLES, User
 
 try:
     from supabase import create_client
@@ -161,7 +168,12 @@ def dashboard():
         files = db.session.scalars(db.select(StoredFile).order_by(StoredFile.uploaded_at.desc())).all()
     else:
         cases = db.session.scalars(
-            db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
+            db.select(Case)
+            .where(or_(
+                Case.created_by == current_user.id,
+                Case.assignments.any(CaseAssignment.user_id == current_user.id),
+            ))
+            .order_by(Case.created_at.desc())
         ).all()
         files = db.session.scalars(
             db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
@@ -215,7 +227,11 @@ def case_detail(case_id):
     if not can_access_case(current_user, case):
         flash("Case not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-    return render_template("case_detail.html", case=case, can_manage=is_admin(current_user) or case.created_by == current_user.id)
+    return render_template(
+        "case_detail.html",
+        case=case,
+        can_manage=can_manage_case(current_user, case),
+    )
 
 
 @app.route("/upload", methods=["GET", "POST"])
@@ -225,7 +241,12 @@ def upload():
         cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
     else:
         cases = db.session.scalars(
-            db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
+            db.select(Case)
+            .where(or_(
+                Case.created_by == current_user.id,
+                Case.assignments.any(CaseAssignment.user_id == current_user.id),
+            ))
+            .order_by(Case.created_at.desc())
         ).all()
     if request.method == "POST":
         uploaded_file = request.files.get("file")
@@ -319,7 +340,7 @@ def delete_file(file_id):
         flash("File not found.", "error")
         return redirect(url_for("dashboard"))
     case = case_document.case
-    if not (is_admin(current_user) or (case and case.created_by == current_user.id)):
+    if not can_manage_case(current_user, case):
         flash("You are not authorized to delete this document.", "error")
         return redirect(url_for("dashboard"))
     try:
@@ -341,7 +362,7 @@ def delete_file(file_id):
 @login_required
 def share_document(document_id):
     document = db.session.get(CaseDocument, document_id)
-    if document is None or not can_access_case(current_user, document.case):
+    if document is None or not can_manage_case(current_user, document.case):
         flash("Document not found or sharing access denied.", "error")
         return redirect(url_for("dashboard"))
     email = request.form.get("email", "").strip().lower()
@@ -396,13 +417,106 @@ def revoke_share(document_id, share_id):
     if document is None or share is None or share.case_document_id != document.id:
         flash("Share not found.", "error")
         return redirect(url_for("dashboard"))
-    if not can_access_case(current_user, document.case):
+    if not can_manage_case(current_user, document.case):
         flash("You are not authorized to revoke this share.", "error")
         return redirect(url_for("dashboard"))
     db.session.delete(share)
     db.session.commit()
     flash("Document share revoked.", "success")
     return redirect(url_for("case_detail", case_id=document.case_id))
+
+
+@app.route("/cases/<int:case_id>/assignments", methods=["GET", "POST"])
+@login_required
+def manage_case_assignments(case_id):
+    case = db.session.get(Case, case_id)
+    if not can_manage_case_assignments(current_user, case):
+        flash("You are not authorized to manage case assignments.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        user_id = request.form.get("user_id", type=int)
+        user = db.session.get(User, user_id) if user_id else None
+        if user is None:
+            flash("Selected user was not found.", "error")
+            return redirect(url_for("manage_case_assignments", case_id=case.id))
+        if user.id == case.created_by:
+            flash("The case owner already has access and does not need an assignment.", "error")
+            return redirect(url_for("manage_case_assignments", case_id=case.id))
+        if user.role == "Admin" and not is_admin(current_user):
+            flash("Only an Admin can assign an Admin account to a case.", "error")
+            return redirect(url_for("manage_case_assignments", case_id=case.id))
+        existing = db.session.scalar(db.select(CaseAssignment).where(
+            CaseAssignment.case_id == case.id,
+            CaseAssignment.user_id == user.id,
+        ))
+        if existing:
+            flash("That user is already assigned to this case.", "error")
+            return redirect(url_for("manage_case_assignments", case_id=case.id))
+        db.session.add(CaseAssignment(case_id=case.id, user_id=user.id, assigned_by=current_user.id))
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("The assignment could not be created.", "error")
+            return redirect(url_for("manage_case_assignments", case_id=case.id))
+        flash(f"{user.name} was assigned to {case.case_number}.", "success")
+        return redirect(url_for("manage_case_assignments", case_id=case.id))
+
+    assigned_ids = {assignment.user_id for assignment in case.assignments}
+    available_users = db.session.scalars(
+        db.select(User).where(User.id != case.created_by).order_by(User.name.asc())
+    ).all()
+    return render_template(
+        "case_assignments.html",
+        case=case,
+        assignments=case.assignments,
+        available_users=available_users,
+        assigned_ids=assigned_ids,
+    )
+
+
+@app.route("/cases/<int:case_id>/assignments/<int:assignment_id>/remove", methods=["POST"])
+@login_required
+def remove_case_assignment(case_id, assignment_id):
+    case = db.session.get(Case, case_id)
+    assignment = db.session.get(CaseAssignment, assignment_id)
+    if not can_manage_case_assignments(current_user, case):
+        flash("You are not authorized to manage case assignments.", "error")
+        return redirect(url_for("dashboard"))
+    if assignment is None or assignment.case_id != case.id:
+        flash("Assignment not found.", "error")
+        return redirect(url_for("manage_case_assignments", case_id=case.id))
+    db.session.delete(assignment)
+    db.session.commit()
+    flash("Case assignment removed.", "success")
+    return redirect(url_for("manage_case_assignments", case_id=case.id))
+
+
+@app.route("/admin/users", methods=["GET", "POST"])
+@login_required
+def manage_users():
+    if not is_admin(current_user):
+        flash("Admin access is required.", "error")
+        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        user = db.session.get(User, request.form.get("user_id", type=int))
+        role = request.form.get("role", "")
+        if user is None:
+            flash("User not found.", "error")
+            return redirect(url_for("manage_users"))
+        if role not in ROLES:
+            flash("Invalid role selected.", "error")
+            return redirect(url_for("manage_users"))
+        if user.id == current_user.id and role != "Admin":
+            flash("You cannot remove your own Admin role.", "error")
+            return redirect(url_for("manage_users"))
+        user.role = role
+        db.session.commit()
+        flash(f"Role updated for {user.email}.", "success")
+        return redirect(url_for("manage_users"))
+    users = db.session.scalars(db.select(User).order_by(User.name.asc())).all()
+    return render_template("admin_users.html", users=users, roles=ROLES)
 
 
 @app.route("/logout")

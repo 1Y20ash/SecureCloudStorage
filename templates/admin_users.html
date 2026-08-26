@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}User Roles — SecureVault{% endblock %}
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="mb-4"><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">Administration</span><h1 class="h2 fw-semibold mb-1">User Roles</h1><p class="text-secondary mb-0">Assign the minimum role required for each account.</p></div>
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th class="ps-4">User</th><th>Current Role</th><th class="text-end pe-4">Update Role</th></tr></thead>
+        <tbody>
+        {% for user in users %}
+          <tr>
+            <td class="ps-4"><strong>{{ user.name }}</strong><div class="small text-secondary">{{ user.email }}</div></td>
+            <td><span class="badge rounded-pill text-bg-light border">{{ user.role }}</span></td>
+            <td class="text-end pe-4">
+              <form method="post" class="d-inline-flex gap-2">
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <select name="role" class="form-select form-select-sm">
+                  {% for role in roles %}<option value="{{ role }}" {% if role == user.role %}selected{% endif %}>{{ role }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-sm btn-outline-success" type="submit">Save</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

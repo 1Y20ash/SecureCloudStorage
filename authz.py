@@ -31,12 +31,26 @@ def share_is_active(share):
     return share.expires_at is None or share.expires_at > datetime.now(timezone.utc)
 
 
+def has_case_assignment(user, case):
+    if not user.is_authenticated or case is None:
+        return False
+    return any(assignment.user_id == user.id for assignment in case.assignments)
+
+
+def can_manage_case(user, case):
+    if not user.is_authenticated or case is None:
+        return False
+    return is_admin(user) or case.created_by == user.id
+
+
 def can_access_case(user, case):
     if not user.is_authenticated or case is None:
         return False
     if is_admin(user):
         return True
-    return case.created_by == user.id
+    if case.created_by == user.id:
+        return True
+    return has_case_assignment(user, case)
 
 
 def can_access_document(user, case_document):
@@ -45,7 +59,7 @@ def can_access_document(user, case_document):
     if is_admin(user):
         return True
     case = case_document.case
-    if case and case.created_by == user.id:
+    if can_access_case(user, case):
         return True
     return any(
         share.shared_with_user_id == user.id
@@ -58,7 +72,8 @@ def can_access_document(user, case_document):
 def can_download_document(user, case_document):
     if not can_access_document(user, case_document):
         return False
-    if is_admin(user) or case_document.case.created_by == user.id:
+    case = case_document.case
+    if is_admin(user) or (case and can_access_case(user, case)):
         return True
     return any(
         share.shared_with_user_id == user.id
