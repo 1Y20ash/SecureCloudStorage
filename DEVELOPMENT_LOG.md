@@ -88,13 +88,62 @@ Commit + PR
 ### Important Operational Rule
 Database schema changes must now be delivered through Alembic migrations. Developers must not reintroduce `db.create_all()` into application startup.
 
-### Current Limitation Resolved
-- [x] Runtime `db.create_all()` removed.
-- [x] Migration framework established.
-- [x] Existing Phase 1 database compatibility considered.
-- [x] New installations have a migration path for the current schema.
-- [ ] Future schema changes will add ordered migration revisions rather than modifying the initial revision.
+## Phase 2 — RBAC Foundation
+
+**Status:** Completed and merged to `main`.
+
+### Implemented Scope
+- User roles and safe default role.
+- Deny-by-default authorization helpers.
+- Administrator, case-owner, and shared-document authorization primitives.
+- Expiring document shares with view/download/manage permissions.
+- Alembic migration `0002_rbac_and_sharing`.
+
+## Phase 2A — RBAC Application Integration
+
+**Status:** Completed and merged to `main`.
+
+### Implemented Scope
+- Protected case access and case uploads.
+- Protected document downloads and deletion.
+- Secure document sharing and revocation.
+- Recipient-aware shared-document dashboard.
+- Expiry and explicit download-permission enforcement.
+
+## Phase 2B — Role Management & Case Assignment
+
+**Status:** Implementation completed on `feature/ps-26190-phase2-rbac`; pending final merge after verification.
+
+### Implemented Scope
+- Added `CaseAssignment` model.
+- Added Alembic migration `0003_case_assignments`.
+- Added unique case/user assignment constraint.
+- Recorded assignment actor and timestamp.
+- Case assignments now participate in deny-by-default case authorization.
+- Assigned users can see assigned cases on the dashboard and upload to authorized cases.
+- Added case assignment management UI.
+- Added assignment removal workflow.
+- Added Admin user-role management UI.
+- Prevented non-admin users from assigning Admin-role accounts.
+- Prevented users from removing their own Admin role.
+- Added Phase 2B authorization tests for assigned/unassigned access, assignment management, share expiry, and download permissions.
+- Added pytest as a free test dependency.
+
+### Security Boundary
+Case assignment grants case-level access. It does not bypass independent document-share permissions for users accessing a document outside their assigned case relationship.
+
+### Phase 2B Completion Criteria
+- [x] Assignment model and migration.
+- [x] Assignment-aware authorization.
+- [x] Assigned-case dashboard visibility.
+- [x] Assignment management UI.
+- [x] Assignment removal.
+- [x] Admin role management UI.
+- [x] Negative authorization tests added.
+- [x] Free-only dependency policy preserved.
+- [ ] Execute test suite in the deployment/CI environment.
+- [ ] Final PR merge and version tag.
 
 ## Next Phase
 
-**Phase 2 — Role-Based Access Control & Secure Sharing**
+**Phase 3 — Audit Trail & Document Integrity**
