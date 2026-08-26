@@ -4,11 +4,17 @@ from extensions import db
 
 
 class EvidenceCustody(db.Model):
+    """Append-only custody event record for documents and investigation evidence."""
+
     __tablename__ = "evidence_custody"
 
     id = db.Column(db.Integer, primary_key=True)
+    # Retained for Phase 3/4 document custody compatibility.
     case_document_id = db.Column(
-        db.Integer, db.ForeignKey("case_documents.id", ondelete="CASCADE"), nullable=False, index=True
+        db.Integer, db.ForeignKey("case_documents.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    evidence_id = db.Column(
+        db.Integer, db.ForeignKey("evidence.id", ondelete="CASCADE"), nullable=True, index=True
     )
     action = db.Column(db.String(40), nullable=False, index=True)
     actor_user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -21,6 +27,7 @@ class EvidenceCustody(db.Model):
     )
 
     case_document = db.relationship("CaseDocument", backref=db.backref("custody_events", lazy=True, order_by="EvidenceCustody.occurred_at"))
+    evidence = db.relationship("Evidence", back_populates="custody_events", foreign_keys=[evidence_id])
     actor = db.relationship("User", foreign_keys=[actor_user_id])
     from_user = db.relationship("User", foreign_keys=[from_user_id])
     to_user = db.relationship("User", foreign_keys=[to_user_id])
