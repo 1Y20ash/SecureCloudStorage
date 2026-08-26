@@ -11,7 +11,6 @@ This file records the controlled development of SecureCloudStorage toward Proble
 ### Baseline
 - Existing stable branch: `main`
 - PS-26190 development branch: `feature/ps-26190-dms`
-- Baseline commit: `5953a3fb2e1d277fc3bb7037272a63b00516a92e`
 - Baseline application: SecureCloudStorage
 
 ### Existing Security Foundation
@@ -40,7 +39,7 @@ This file records the controlled development of SecureCloudStorage toward Proble
 
 ## Phase 1 — Core DMS & Case Management
 
-**Status:** Implementation complete on the development branch; verification/merge is pending.
+**Status:** Completed and merged to `main`.
 
 ### Implemented Scope
 - Case model with unique Case ID, title, description, department, status, creator, and timestamp.
@@ -54,11 +53,47 @@ This file records the controlled development of SecureCloudStorage toward Proble
 - Existing AES-256-GCM encryption and encrypted storage flow preserved.
 - Existing files remain visible through the dashboard.
 
-### Phase 1 Verification Notes
-- New DMS tables are created automatically when the application starts if they do not already exist.
-- Existing tables are not altered by `db.create_all()`; future schema evolution should use a migration system.
-- Authorization currently remains user-scoped through the existing authenticated-user ownership model. Full role-based access control is reserved for Phase 2.
-- Existing legacy files are not automatically assigned to cases; they remain available as legacy encrypted files until explicitly migrated.
+## Phase 1.1 — Database Migration System
+
+**Status:** Completed on `feature/ps-26190-dms`; ready for merge.
+
+### Problem Addressed
+The Phase 1 application previously called `db.create_all()` during application startup. That is suitable for initial table creation but is not a controlled schema-evolution mechanism because it does not provide ordered, reviewable, reversible migrations.
+
+### Implemented
+- Added Alembic migration configuration in `alembic.ini`.
+- Added migration environment in `migrations/env.py` using the application's SQLAlchemy metadata.
+- Added a reusable migration template.
+- Added an initial schema migration covering the current `user`, `stored_files`, `cases`, and `case_documents` tables.
+- The initial migration safely leaves already-existing Phase 1 tables intact while creating missing tables on a new database.
+- Added Alembic as a free/open-source dependency.
+- Removed runtime `db.create_all()` from `app.py`.
+- Application startup no longer changes database schema implicitly.
+
+### Migration Workflow
+```text
+Model Change
+    ↓
+Create Alembic Migration
+    ↓
+Review Migration
+    ↓
+Run: alembic upgrade head
+    ↓
+Test Application
+    ↓
+Commit + PR
+```
+
+### Important Operational Rule
+Database schema changes must now be delivered through Alembic migrations. Developers must not reintroduce `db.create_all()` into application startup.
+
+### Current Limitation Resolved
+- [x] Runtime `db.create_all()` removed.
+- [x] Migration framework established.
+- [x] Existing Phase 1 database compatibility considered.
+- [x] New installations have a migration path for the current schema.
+- [ ] Future schema changes will add ordered migration revisions rather than modifying the initial revision.
 
 ## Next Phase
 
