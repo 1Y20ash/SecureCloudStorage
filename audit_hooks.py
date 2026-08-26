@@ -2,12 +2,12 @@
 
 import hashlib
 import os
-from datetime import datetime, timezone
 
 from flask import flash, g, has_request_context, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.orm import Session
+from werkzeug.utils import secure_filename
 
 from config import Config
 from extensions import db
@@ -96,7 +96,7 @@ def _write_integrity_failure(file_record, expected, actual):
         case_id=file_record.case_document.case_id if file_record.case_document else None,
         success=False,
         ip_address=_ip_address(),
-        details=f"SHA-256 mismatch: expected {expected}, received {actual}",
+        details=f"SHA-256 mismatch: expected {expected}, received {actual}"[:500],
     ))
     db.session.commit()
 
@@ -105,11 +105,18 @@ def _verify_download_integrity():
     if request.endpoint != "download" or request.method != "POST":
         return None
     file_id = request.view_args.get("file_id") if request.view_args else None
-    if not file_id:
+    if not file_id or not current_user.is_authenticated:
         return None
     stored_file = db.session.get(StoredFile, file_id)
     if stored_file is None or not stored_file.sha256_hash:
         return None
+
+    # Do not perform integrity checks before authorization. This prevents an
+    # unauthorized caller from learning whether a protected object exists.
+    from authz import can_download_document
+    if not can_download_document(current_user, stored_file.case_document):
+        return None
+
     try:
         encrypted_data = _storage_bytes(stored_file.encrypted_filename)
         actual = _sha256(encrypted_data)
@@ -124,17 +131,17 @@ def _verify_download_integrity():
     return None
 
 
-def _backfill_upload_hash():
-    if request.endpoint != "upload" or request.method != "POST":
+def _backfill_upload_hash(response):
+    if request.endpoint != "upload" or request.method != "POST" or response.status_code not in (302, 303):
         return
     if not getattr(current_user, "is_authenticated", False):
         return
-    filename = request.files.get("file").filename if request.files.get("file") else ""
+    uploaded = request.files.get("file")
+    filename = secure_filename(uploaded.filename) if uploaded else ""
     case_id = request.form.get("case_id", type=int)
     if not filename or not case_id:
         return
-    # The upload transaction has already committed. Select the newest matching
-    # document for this user/case/name, then hash the exact encrypted object.
+
     document = db.session.scalar(
         db.select(CaseDocument)
         .join(StoredFile, StoredFile.id == CaseDocument.stored_file_id)
@@ -196,8 +203,6 @@ def _record_request_event(response):
         db.session.rollback()
 
 
-# Importing the Flask application here is intentional: app.py creates the Flask
-# object before importing models. The hooks are registered once during startup.
 try:
     from app import app
 
@@ -211,16 +216,15 @@ try:
     @app.after_request
     def phase3_audit_events(response):
         if not getattr(g, "phase3_blocked", False):
-            _backfill_upload_hash()
+            _backfill_upload_hash(response)
             _record_request_event(response)
         return response
 
     @app.route("/admin/audit-logs")
     def audit_logs():
-        from flask_login import login_required
-        from authz import is_admin
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
+        from authz import is_admin
         if not is_admin(current_user):
             flash("Admin access is required.", "error")
             return redirect(url_for("dashboard"))
@@ -229,5 +233,4 @@ try:
         ).all()
         return render_template("admin_audit_logs.html", logs=logs)
 except ImportError:
-    # Allows isolated model/unit tests to import the audit hooks without Flask app startup.
     pass
