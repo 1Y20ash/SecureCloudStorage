@@ -111,8 +111,8 @@ def _verify_download_integrity():
     if stored_file is None or not stored_file.sha256_hash:
         return None
 
-    # Do not perform integrity checks before authorization. This prevents an
-    # unauthorized caller from learning whether a protected object exists.
+    # Authorization is checked before integrity verification so protected
+    # object existence is not disclosed to unauthorized callers.
     from authz import can_download_document
     if not can_download_document(current_user, stored_file.case_document):
         return None
@@ -203,9 +203,8 @@ def _record_request_event(response):
         db.session.rollback()
 
 
-try:
-    from app import app
-
+def _register_app_hooks(app):
+    """Register Flask hooks only after the application's db.init_app call."""
     @app.before_request
     def phase3_integrity_guard():
         result = _verify_download_integrity()
@@ -232,5 +231,19 @@ try:
             db.select(AuditLog).order_by(AuditLog.created_at.desc()).limit(500)
         ).all()
         return render_template("admin_audit_logs.html", logs=logs)
-except ImportError:
-    pass
+
+
+# app.py calls db.init_app(app) after importing models. Wrapping that call
+# gives us a fully initialized Flask app without introducing an import cycle.
+_original_init_app = db.init_app
+
+
+def _init_app_with_phase3(app, *args, **kwargs):
+    result = _original_init_app(app, *args, **kwargs)
+    if not app.extensions.get("phase3_hooks_registered"):
+        _register_app_hooks(app)
+        app.extensions["phase3_hooks_registered"] = True
+    return result
+
+
+db.init_app = _init_app_with_phase3
