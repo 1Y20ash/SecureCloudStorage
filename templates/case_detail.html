@@ -4,409 +4,143 @@
 
 {% block content %}
 <div class="container py-4 py-lg-5">
-
-  <!-- Case Header -->
   <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start mb-4">
     <div>
-      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">
-        Case {{ case.case_number }}
-      </span>
-
+      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">Case {{ case.case_number }}</span>
       <h1 class="h2 fw-semibold mb-1">{{ case.title }}</h1>
-
-      <p class="text-secondary mb-0">
-        {{ case.description or 'No description provided.' }}
-      </p>
+      <p class="text-secondary mb-0">{{ case.description or 'No description provided.' }}</p>
     </div>
-
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-success rounded-3"
-         href="{{ url_for('manage_case_assignments', case_id=case.id) }}">
-        Manage assignments
-      </a>
-
-      <a class="btn btn-success rounded-3"
-         href="{{ url_for('upload') }}">
-        Add document ↑
-      </a>
+      <a class="btn btn-outline-success rounded-3" href="{{ url_for('manage_case_assignments', case_id=case.id) }}">Manage assignments</a>
+      <a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document ↑</a>
     </div>
   </div>
 
-
-  <!-- Case Information -->
   <div class="row g-3 mb-4">
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Status</div>
-          <div class="fw-semibold mt-1">{{ case.status }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Department</div>
-          <div class="fw-semibold mt-1">
-            {{ case.department or 'Not specified' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Documents</div>
-          <div class="fw-semibold mt-1">
-            {{ case.documents|length }}
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Status</div><div class="fw-semibold mt-1">{{ case.status }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Department</div><div class="fw-semibold mt-1">{{ case.department or 'Not specified' }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Documents</div><div class="fw-semibold mt-1">{{ case.documents|length }}</div></div></div></div>
   </div>
 
-
-  <!-- Documents -->
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-
     <div class="card-header bg-white border-0 p-4">
-      <h2 class="h4 mb-1">Case Documents</h2>
-      <p class="text-secondary mb-0">
-        Encrypted documents associated with this case.
-      </p>
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div><h2 class="h4 mb-1">Case Documents</h2><p class="text-secondary mb-0">Encrypted documents with controlled version history and lifecycle state.</p></div>
+        <span class="badge rounded-pill text-bg-light border">Phase 4 · Lifecycle</span>
+      </div>
     </div>
 
     {% if case.documents %}
-
     <div class="table-responsive">
-
       <table class="table table-hover align-middle mb-0">
-
-        <thead class="table-light">
-          <tr>
-            <th class="ps-4">Document</th>
-            <th>Category</th>
-            <th>Version</th>
-            <th>Status</th>
-            <th>Shares</th>
-            <th class="text-end pe-4">Action</th>
-          </tr>
-        </thead>
-
+        <thead class="table-light"><tr><th class="ps-4">Document</th><th>Category</th><th>Version</th><th>Status</th><th>Shares</th><th class="text-end pe-4">Action</th></tr></thead>
         <tbody>
-
         {% for document in case.documents %}
-
-          <!-- Document row -->
           <tr>
-
-            <td class="ps-4">
-              <strong>{{ document.stored_file.original_filename }}</strong>
-
-              <div class="small text-secondary">
-                {{ document.stored_file.file_size }} bytes
-              </div>
-            </td>
-
-            <td>
-              {{ document.category }}
-            </td>
-
-            <td>
-              <span class="fw-semibold">
-                v{{ document.version }}
-              </span>
-            </td>
-
-            <td>
-              <span class="badge rounded-pill text-bg-success">
-                {{ document.status }}
-              </span>
-            </td>
-
-            <td>
-              {{ document.shares|length }}
-            </td>
-
-            <td class="text-end pe-4">
-
-              <div class="d-flex justify-content-end gap-2">
-
-                <a class="btn btn-sm btn-outline-success"
-                   href="{{ url_for('download', file_id=document.stored_file.id) }}">
-                  Download →
-                </a>
-
-              </div>
-
-            </td>
-
+            <td class="ps-4"><strong>{{ document.stored_file.original_filename }}</strong><div class="small text-secondary">{{ document.stored_file.file_size }} bytes</div></td>
+            <td>{{ document.category }}</td>
+            <td><span class="fw-semibold">v{{ document.version }}</span></td>
+            <td><span class="badge rounded-pill {% if document.status == 'Approved' %}text-bg-success{% elif document.status == 'Archived' %}text-bg-secondary{% elif document.status == 'Reviewed' %}text-bg-warning{% else %}text-bg-light border{% endif %}">{{ document.status }}</span></td>
+            <td>{{ document.shares|length }}</td>
+            <td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('download', file_id=document.stored_file.id) }}">Download →</a></td>
           </tr>
-
 
           {% if can_manage %}
-
-          <!-- Create New Version -->
           <tr class="table-light">
-
             <td colspan="6" class="px-4 py-3">
+              <div class="border rounded-4 bg-white p-3 mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                  <div class="fw-semibold">Lifecycle control</div>
+                  <span class="small text-secondary">Forward-only: Draft → Reviewed → Approved → Archived</span>
+                </div>
+                <div class="small text-secondary mb-3">Transitions are recorded in the audit trail and cannot skip or move backward.</div>
+                {% if document.status == 'Draft' %}
+                <form method="post" action="{{ url_for('transition_document_lifecycle', document_id=document.id) }}" class="row g-2 align-items-end">
+                  <input type="hidden" name="status" value="Reviewed">
+                  <div class="col-md-8"><label class="form-label small fw-semibold">Change description</label><input type="text" name="change_description" class="form-control" maxlength="500" placeholder="Why is this version ready for review?" required></div>
+                  <div class="col-md-4"><button class="btn btn-outline-success w-100" type="submit">Submit for review →</button></div>
+                </form>
+                {% elif document.status == 'Reviewed' %}
+                <form method="post" action="{{ url_for('transition_document_lifecycle', document_id=document.id) }}" class="row g-2 align-items-end">
+                  <input type="hidden" name="status" value="Approved">
+                  <div class="col-md-8"><label class="form-label small fw-semibold">Approval note</label><input type="text" name="change_description" class="form-control" maxlength="500" placeholder="Approval or verification note" required></div>
+                  <div class="col-md-4"><button class="btn btn-success w-100" type="submit">Approve version →</button></div>
+                </form>
+                {% elif document.status == 'Approved' %}
+                <form method="post" action="{{ url_for('transition_document_lifecycle', document_id=document.id) }}" class="row g-2 align-items-end">
+                  <input type="hidden" name="status" value="Archived">
+                  <div class="col-md-8"><label class="form-label small fw-semibold">Archive note</label><input type="text" name="change_description" class="form-control" maxlength="500" placeholder="Reason for archival" required></div>
+                  <div class="col-md-4"><button class="btn btn-outline-secondary w-100" type="submit">Archive version →</button></div>
+                </form>
+                {% else %}
+                <div class="alert alert-light border rounded-3 mb-0 small">This document is archived. Archived documents are immutable and cannot be restored.</div>
+                {% endif %}
+              </div>
 
               <div class="border rounded-4 bg-white p-3 mb-3">
-
-                <div class="fw-semibold mb-1">
-                  Create New Version
-                </div>
-
-                <div class="small text-secondary mb-3">
-                  Upload an updated copy of this document.
-                  The new version will be linked to the previous version using its SHA-256 hash.
-                </div>
-
-                <form
-                  method="post"
-                  enctype="multipart/form-data"
-                  action="{{ url_for('create_document_version', document_id=document.id) }}"
-                  class="row g-3 align-items-end"
-                >
-
-                  <div class="col-md-5">
-
-                    <label class="form-label small fw-semibold">
-                      Updated document
-                    </label>
-
-                    <input
-                      type="file"
-                      name="file"
-                      class="form-control"
-                      required
-                    >
-
-                    <div class="form-text">
-                      Maximum file size: 10 MB
-                    </div>
-
-                  </div>
-
-
-                  <div class="col-md-4">
-
-                    <label class="form-label small fw-semibold">
-                      Encryption password
-                    </label>
-
-                    <input
-                      type="password"
-                      name="encryption_password"
-                      class="form-control"
-                      placeholder="Enter encryption password"
-                      required
-                    >
-
-                  </div>
-
-
-                  <div class="col-md-3">
-
-                    <button
-                      type="submit"
-                      class="btn btn-success w-100"
-                    >
-                      Create Version {{ document.version + 1 }} ↑
-                    </button>
-
-                  </div>
-
+                <div class="fw-semibold mb-1">Create New Version</div>
+                <div class="small text-secondary mb-3">Upload an updated copy. The new version remains linked to the previous version through its SHA-256 hash.</div>
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('create_document_version', document_id=document.id) }}" class="row g-3 align-items-end">
+                  <div class="col-md-5"><label class="form-label small fw-semibold">Updated document</label><input type="file" name="file" class="form-control" required><div class="form-text">Maximum file size: 10 MB</div></div>
+                  <div class="col-md-4"><label class="form-label small fw-semibold">Encryption password</label><input type="password" name="encryption_password" class="form-control" placeholder="Enter encryption password" required></div>
+                  <div class="col-md-3"><button type="submit" class="btn btn-success w-100">Create Version {{ document.version + 1 }} ↑</button></div>
                 </form>
-
               </div>
 
-
-              <!-- Sharing -->
-              <form
-                method="post"
-                action="{{ url_for('share_document', document_id=document.id) }}"
-                class="row g-2 align-items-end"
-              >
-
-                <div class="col-md-5">
-
-                  <label class="form-label small mb-1">
-                    Share with account email
-                  </label>
-
-                  <input
-                    type="email"
-                    name="email"
-                    class="form-control"
-                    placeholder="teammate@example.com"
-                    required
-                  >
-
+              <div class="border rounded-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3"><div class="fw-semibold">Version history</div><span class="small text-secondary">{{ document.versions|length }} version{% if document.versions|length != 1 %}s{% endif %}</span></div>
+                <div class="vstack gap-2">
+                {% for version in document.versions|reverse %}
+                  <div class="border rounded-3 p-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                      <div>
+                        <div class="fw-semibold">v{{ version.version }} <span class="badge rounded-pill ms-1 {% if version.lifecycle_status == 'Approved' %}text-bg-success{% elif version.lifecycle_status == 'Archived' %}text-bg-secondary{% elif version.lifecycle_status == 'Reviewed' %}text-bg-warning{% else %}text-bg-light border{% endif %}">{{ version.lifecycle_status }}</span>{% if version.id == document.versions[-1].id %}<span class="badge rounded-pill text-bg-light border ms-1">Current</span>{% endif %}</div>
+                        <div class="small text-secondary mt-1">{{ version.created_at.strftime('%d %b %Y, %H:%M UTC') }}{% if version.creator %} · {{ version.creator.name }}{% endif %}</div>
+                      </div>
+                      {% if version.id != document.versions[-1].id and document.status != 'Archived' %}
+                      <form method="post" action="{{ url_for('restore_document_version_route', document_id=document.id, version_number=version.version) }}" class="d-flex gap-2 align-items-center">
+                        <input type="text" name="reason" class="form-control form-control-sm" maxlength="500" placeholder="Restore reason" required>
+                        <button class="btn btn-sm btn-outline-warning text-nowrap" type="submit">Restore as new version</button>
+                      </form>
+                      {% endif %}
+                    </div>
+                    {% if version.change_description %}<div class="small mt-2">{{ version.change_description }}</div>{% endif %}
+                    <div class="small text-secondary text-break mt-2">SHA-256: <code>{{ version.sha256_hash }}</code></div>
+                    {% if version.previous_hash %}<div class="small text-secondary text-break">Previous: <code>{{ version.previous_hash }}</code></div>{% endif %}
+                  </div>
+                {% endfor %}
                 </div>
+              </div>
 
-
-                <div class="col-md-3">
-
-                  <label class="form-label small mb-1">
-                    Expires (optional)
-                  </label>
-
-                  <input
-                    type="datetime-local"
-                    name="expires_at"
-                    class="form-control"
-                  >
-
-                </div>
-
-
-                <div class="col-md-2 form-check ms-md-2">
-
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    name="can_download"
-                    id="download-{{ document.id }}"
-                  >
-
-                  <label
-                    class="form-check-label small"
-                    for="download-{{ document.id }}"
-                  >
-                    Allow download
-                  </label>
-
-                </div>
-
-
-                <div class="col-md-2">
-
-                  <button
-                    class="btn btn-outline-success w-100"
-                    type="submit"
-                  >
-                    Share / Update
-                  </button>
-
-                </div>
-
+              <form method="post" action="{{ url_for('share_document', document_id=document.id) }}" class="row g-2 align-items-end mt-3">
+                <div class="col-md-5"><label class="form-label small mb-1">Share with account email</label><input type="email" name="email" class="form-control" placeholder="teammate@example.com" required></div>
+                <div class="col-md-3"><label class="form-label small mb-1">Expires (optional)</label><input type="datetime-local" name="expires_at" class="form-control"></div>
+                <div class="col-md-2 form-check ms-md-2"><input class="form-check-input" type="checkbox" name="can_download" id="download-{{ document.id }}"><label class="form-check-label small" for="download-{{ document.id }}">Allow download</label></div>
+                <div class="col-md-2"><button class="btn btn-outline-success w-100" type="submit">Share / Update</button></div>
               </form>
 
-
-              <!-- Share Records -->
               {% if document.shares %}
-
-              <div class="mt-3">
-
-                <div class="small fw-semibold mb-2">
-                  Share records
-                </div>
-
+              <div class="mt-3"><div class="small fw-semibold mb-2">Share records</div>
                 {% for share in document.shares %}
-
                 <div class="d-flex flex-wrap justify-content-between align-items-center border rounded-3 bg-white p-2 mb-2">
-
-                  <div class="small">
-
-                    <strong>
-                      {{ share.shared_with.email }}
-                    </strong>
-
-                    · view
-
-                    {% if share.can_download %}
-                      + download
-                    {% endif %}
-
-                    {% if share.expires_at %}
-                      · expires
-                      {{ share.expires_at.strftime('%d %b %Y, %H:%M UTC') }}
-                    {% endif %}
-
-                  </div>
-
-
-                  <form
-                    method="post"
-                    action="{{ url_for(
-                      'revoke_share',
-                      document_id=document.id,
-                      share_id=share.id
-                    ) }}"
-                  >
-
-                    <button
-                      class="btn btn-sm btn-outline-danger"
-                      type="submit"
-                    >
-                      Revoke
-                    </button>
-
-                  </form>
-
+                  <div class="small"><strong>{{ share.shared_with.email }}</strong> · view{% if share.can_download %} + download{% endif %}{% if share.expires_at %} · expires {{ share.expires_at.strftime('%d %b %Y, %H:%M UTC') }}{% endif %}</div>
+                  <form method="post" action="{{ url_for('revoke_share', document_id=document.id, share_id=share.id) }}"><button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button></form>
                 </div>
-
                 {% endfor %}
-
               </div>
-
               {% endif %}
-
             </td>
-
           </tr>
-
           {% endif %}
-
         {% endfor %}
-
         </tbody>
-
       </table>
-
     </div>
-
     {% else %}
-
-    <div class="card-body text-center py-5">
-
-      <div class="display-6 mb-3">📁</div>
-
-      <h3 class="h5">
-        No documents yet
-      </h3>
-
-      <p class="text-secondary">
-        Add the first encrypted document to this case.
-      </p>
-
-      <a
-        class="btn btn-success rounded-3"
-        href="{{ url_for('upload') }}"
-      >
-        Add document
-      </a>
-
-    </div>
-
+    <div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No documents yet</h3><p class="text-secondary">Add the first encrypted document to this case.</p><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document</a></div>
     {% endif %}
-
   </div>
 
-
-  <!-- Security Note -->
-  <div class="alert alert-light border rounded-4 small mb-0">
-
-    Case assignments are explicit and deny-by-default.
-    Assigned users can access the case, while document sharing remains
-    separately controlled and expiring.
-
-  </div>
-
+  <div class="alert alert-light border rounded-4 small mb-0">Lifecycle transitions are forward-only and audited. Historical versions are preserved; restoration creates a new version instead of rewriting history.</div>
 </div>
 {% endblock %}
