@@ -23,6 +23,10 @@ class DocumentVersion(db.Model):
     created_at = db.Column(
         db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True
     )
+    change_description = db.Column(db.String(500), nullable=True)
+    lifecycle_status = db.Column(
+        db.String(20), nullable=False, default="Draft", server_default="Draft", index=True
+    )
 
     case_document = db.relationship("CaseDocument", backref=db.backref("versions", lazy=True, order_by="DocumentVersion.version"))
     stored_file = db.relationship("StoredFile", backref=db.backref("document_versions", lazy=True))
