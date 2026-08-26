@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from cryptography.exceptions import InvalidTag
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
-from authz import can_access_case, can_access_document, can_download_document, is_admin
+from authz import can_access_case, can_download_document, is_admin
 from config import Config
 from crypto.encryption import decrypt_file, encrypt_file
 from extensions import db, login_manager
@@ -17,7 +18,7 @@ from models.case import Case
 from models.case_document import CaseDocument
 from models.document_share import DocumentShare
 from models.file import StoredFile
-from models.user import User, ROLES
+from models.user import User
 
 try:
     from supabase import create_client
@@ -165,10 +166,14 @@ def dashboard():
         files = db.session.scalars(
             db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
         ).all()
+    now = datetime.now(timezone.utc)
     shared_documents = db.session.scalars(
         db.select(CaseDocument)
         .join(DocumentShare, DocumentShare.case_document_id == CaseDocument.id)
-        .where(DocumentShare.shared_with_user_id == current_user.id)
+        .where(
+            DocumentShare.shared_with_user_id == current_user.id,
+            or_(DocumentShare.expires_at.is_(None), DocumentShare.expires_at > now),
+        )
         .order_by(CaseDocument.created_at.desc())
     ).all()
     return render_template("dashboard.html", files=files, cases=cases, shared_documents=shared_documents)
@@ -361,8 +366,8 @@ def share_document(document_id):
     if existing:
         existing.can_view = True
         existing.can_download = request.form.get("can_download") == "on"
-        existing.can_manage = request.form.get("can_manage") == "on"
         existing.expires_at = expires_at
+        existing.shared_by_user_id = current_user.id
     else:
         db.session.add(DocumentShare(
             case_document_id=document.id,
@@ -370,7 +375,7 @@ def share_document(document_id):
             shared_by_user_id=current_user.id,
             can_view=True,
             can_download=request.form.get("can_download") == "on",
-            can_manage=request.form.get("can_manage") == "on",
+            can_manage=False,
             expires_at=expires_at,
         ))
     try:
