@@ -1,66 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Upload File — SecureVault{% endblock %}
-
+{% block title %}Add Document — SecureVault{% endblock %}
 {% block content %}
 <div class="container py-4 py-lg-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-lg-8 col-xl-7">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-                <div class="card-body p-4 p-md-5">
-                    <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3"><span class="eyebrow-dot d-inline-block me-2"></span> Pre-Storage Protection</span>
-                    <h1 class="display-6 fw-semibold mb-2">Upload to your vault</h1>
-                    <p class="text-secondary mb-4">Everything uploaded here is encrypted before storage.</p>
-
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="border border-2 border-success-subtle rounded-4 p-4 p-md-5 text-center bg-light mb-3">
-                            <input id="file" class="form-control mb-3" type="file" name="file" required>
-                            <div class="display-6 text-success mb-2">↑</div>
-                            <div class="fw-semibold">Drop a file here or browse files</div>
-                            <div class="small text-secondary mt-1">Any file type · AES-256-GCM · Maximum 10 MB</div>
-                        </div>
-
-                        <div class="alert alert-light border rounded-3 mb-4">
-                            <div class="fw-semibold mb-1">File types</div>
-                            <div class="text-secondary small">Any file type is accepted, including videos, audio, images, documents, archives and source-code files.</div>
-                            <div class="small text-secondary mt-2">Maximum file size: <strong>10 MB</strong></div>
-                        </div>
-
-                        <div class="alert alert-success d-none" id="selected-file" role="alert">
-                            <div class="d-flex justify-content-between gap-3">
-                                <span class="selected-file-name text-break"></span>
-                                <span class="selected-file-size text-nowrap"></span>
-                            </div>
-                        </div>
-
-                        <div class="progress d-none mb-2" id="encryption-progress" style="height: 6px;" aria-hidden="true">
-                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-                        </div>
-                        <div class="d-none justify-content-between small text-secondary mb-4" id="progress-status">
-                            <span>Preparing encryption...</span><span>AES-256</span>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="encryption_password" class="form-label fw-semibold">Encryption password</label>
-                            <div class="input-group">
-                                <input id="encryption_password" class="form-control" type="password" name="encryption_password" minlength="8" placeholder="Enter a password to lock this file" required>
-                                <button class="btn btn-outline-secondary toggle-pw" type="button" data-target="encryption_password" aria-label="Show password">👁</button>
-                            </div>
-                            <div class="form-text">Remember this password. It is required to decrypt and download the file later.</div>
-                        </div>
-
-                        <div class="alert alert-success d-flex align-items-start gap-2 rounded-3">
-                            <span>🛡️</span>
-                            <span><strong>AES-256-GCM protected.</strong> Your original file is encrypted before it enters storage.</span>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-success btn-lg rounded-3 submit-btn" type="submit">Encrypt &amp; store file ↑</button>
-                            <a class="btn btn-outline-secondary rounded-3" href="{{ url_for('dashboard') }}">Back to vault</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div class="row justify-content-center"><div class="col-12 col-lg-8 col-xl-7">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden"><div class="card-body p-4 p-md-5">
+      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · Secure Document Intake</span>
+      <h1 class="display-6 fw-semibold mb-2">Add document to a case</h1>
+      <p class="text-secondary mb-4">The original file is encrypted before it is written to storage.</p>
+      {% if not cases %}
+      <div class="alert alert-warning rounded-3">Create a case before uploading a legal or investigation document. <a href="{{ url_for('create_case') }}" class="alert-link">Create a case →</a></div>
+      {% endif %}
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3"><label for="case_id" class="form-label fw-semibold">Case</label><select id="case_id" name="case_id" class="form-select" required {% if not cases %}disabled{% endif %}><option value="">Select a case</option>{% for case in cases %}<option value="{{ case.id }}">{{ case.case_number }} — {{ case.title }}</option>{% endfor %}</select></div>
+        <div class="mb-3"><label for="category" class="form-label fw-semibold">Document category</label><select id="category" name="category" class="form-select" required {% if not cases %}disabled{% endif %}>{% for category in categories %}<option value="{{ category }}">{{ category }}</option>{% endfor %}</select></div>
+        <div class="border border-2 border-success-subtle rounded-4 p-4 text-center bg-light mb-3"><input id="file" class="form-control mb-3" type="file" name="file" required {% if not cases %}disabled{% endif %}><div class="display-6 text-success mb-2">↑</div><div class="fw-semibold">Select a document</div><div class="small text-secondary mt-1">Any file type · AES-256-GCM · Maximum 10 MB</div></div>
+        <div class="mb-4"><label for="encryption_password" class="form-label fw-semibold">Encryption password</label><input id="encryption_password" class="form-control" type="password" name="encryption_password" minlength="8" placeholder="Enter a password to lock this document" required {% if not cases %}disabled{% endif %}><div class="form-text">This password is required to decrypt the document later.</div></div>
+        <div class="alert alert-success rounded-3"><strong>AES-256-GCM protected.</strong> The plaintext file is encrypted before storage.</div>
+        <div class="d-flex gap-2"><button class="btn btn-success btn-lg rounded-3" type="submit" {% if not cases %}disabled{% endif %}>Encrypt &amp; store document</button><a class="btn btn-outline-secondary btn-lg rounded-3" href="{{ url_for('dashboard') }}">Cancel</a></div>
+      </form>
+    </div></div>
+  </div></div>
 </div>
 {% endblock %}
