@@ -48,18 +48,21 @@ def restore_document_version(document, version_number, actor_user_id, reason=Non
     preserving the complete version chain. The restored version starts in Draft.
     """
     current = get_current_version(document)
+    if current is None:
+        raise ValueError("Requested document version does not exist.")
+    if current.lifecycle_status == DocumentVersion.LIFECYCLE_ARCHIVED:
+        raise ValueError("Archived documents cannot be restored.")
+
     target = db.session.scalar(
         db.select(DocumentVersion).where(
             DocumentVersion.case_document_id == document.id,
             DocumentVersion.version == version_number,
         )
     )
-    if current is None or target is None:
+    if target is None:
         raise ValueError("Requested document version does not exist.")
     if target.id == current.id:
         raise ValueError("The current document version cannot be restored.")
-    if current.lifecycle_status == DocumentVersion.LIFECYCLE_ARCHIVED:
-        raise ValueError("Archived documents cannot be restored.")
 
     next_version_number = current.version + 1
     restored = DocumentVersion(
