@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Create Case — SecureVault{% endblock %}
+{% block content %}
+<div class="container py-4 py-lg-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 p-md-5">
+          <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · Case Management</span>
+          <h1 class="h2 fw-semibold">Create investigation case</h1>
+          <p class="text-secondary mb-4">Create the case first, then securely associate legal and investigation documents with it.</p>
+          <form method="POST">
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label fw-semibold" for="case_number">Case ID</label><input id="case_number" name="case_number" class="form-control" placeholder="CASE-2026-001" required></div>
+              <div class="col-md-6"><label class="form-label fw-semibold" for="department">Department</label><input id="department" name="department" class="form-control" placeholder="Investigation Department"></div>
+              <div class="col-12"><label class="form-label fw-semibold" for="title">Case title</label><input id="title" name="title" class="form-control" placeholder="Robbery Investigation" required></div>
+              <div class="col-12"><label class="form-label fw-semibold" for="description">Description</label><textarea id="description" name="description" class="form-control" rows="4" placeholder="Brief case description"></textarea></div>
+              <div class="col-md-6"><label class="form-label fw-semibold" for="status">Status</label><select id="status" name="status" class="form-select">{% for status in statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}</select></div>
+            </div>
+            <div class="d-flex gap-2 mt-4"><button class="btn btn-success rounded-3" type="submit">Create Case</button><a class="btn btn-outline-secondary rounded-3" href="{{ url_for('dashboard') }}">Cancel</a></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
