@@ -9,6 +9,17 @@ class DocumentVersion(db.Model):
         db.UniqueConstraint("case_document_id", "version", name="uq_document_version"),
     )
 
+    LIFECYCLE_DRAFT = "Draft"
+    LIFECYCLE_REVIEWED = "Reviewed"
+    LIFECYCLE_APPROVED = "Approved"
+    LIFECYCLE_ARCHIVED = "Archived"
+    LIFECYCLE_STATUSES = (
+        LIFECYCLE_DRAFT,
+        LIFECYCLE_REVIEWED,
+        LIFECYCLE_APPROVED,
+        LIFECYCLE_ARCHIVED,
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     case_document_id = db.Column(
         db.Integer, db.ForeignKey("case_documents.id", ondelete="CASCADE"), nullable=False, index=True
@@ -25,7 +36,7 @@ class DocumentVersion(db.Model):
     )
     change_description = db.Column(db.String(500), nullable=True)
     lifecycle_status = db.Column(
-        db.String(20), nullable=False, default="Draft", server_default="Draft", index=True
+        db.String(20), nullable=False, default=LIFECYCLE_DRAFT, server_default=LIFECYCLE_DRAFT, index=True
     )
 
     case_document = db.relationship("CaseDocument", backref=db.backref("versions", lazy=True, order_by="DocumentVersion.version"))
