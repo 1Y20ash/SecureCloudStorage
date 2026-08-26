@@ -1,6 +1,7 @@
 import io
 import os
 import secrets
+from datetime import datetime, timezone
 
 from cryptography.exceptions import InvalidTag
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
@@ -8,19 +9,20 @@ from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
+from authz import can_access_case, can_access_document, can_download_document, is_admin
 from config import Config
 from crypto.encryption import decrypt_file, encrypt_file
 from extensions import db, login_manager
 from models.case import Case
 from models.case_document import CaseDocument
+from models.document_share import DocumentShare
 from models.file import StoredFile
-from models.user import User
+from models.user import User, ROLES
 
 try:
     from supabase import create_client
 except ImportError:
     create_client = None
-
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -84,6 +86,18 @@ def delete_encrypted_file(filename):
         os.remove(encrypted_path)
 
 
+def parse_expiry(value):
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
 @app.route("/")
 def home():
     if current_user.is_authenticated:
@@ -141,13 +155,23 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    files = db.session.scalars(
-        db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
+    if is_admin(current_user):
+        cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
+        files = db.session.scalars(db.select(StoredFile).order_by(StoredFile.uploaded_at.desc())).all()
+    else:
+        cases = db.session.scalars(
+            db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
+        ).all()
+        files = db.session.scalars(
+            db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
+        ).all()
+    shared_documents = db.session.scalars(
+        db.select(CaseDocument)
+        .join(DocumentShare, DocumentShare.case_document_id == CaseDocument.id)
+        .where(DocumentShare.shared_with_user_id == current_user.id)
+        .order_by(CaseDocument.created_at.desc())
     ).all()
-    cases = db.session.scalars(
-        db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
-    ).all()
-    return render_template("dashboard.html", files=files, cases=cases)
+    return render_template("dashboard.html", files=files, cases=cases, shared_documents=shared_documents)
 
 
 @app.route("/cases/new", methods=["GET", "POST"])
@@ -182,19 +206,22 @@ def create_case():
 @app.route("/cases/<int:case_id>")
 @login_required
 def case_detail(case_id):
-    case = db.session.scalar(db.select(Case).where(Case.id == case_id, Case.created_by == current_user.id))
-    if case is None:
+    case = db.session.get(Case, case_id)
+    if not can_access_case(current_user, case):
         flash("Case not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-    return render_template("case_detail.html", case=case)
+    return render_template("case_detail.html", case=case, can_manage=is_admin(current_user) or case.created_by == current_user.id)
 
 
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
-    cases = db.session.scalars(
-        db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
-    ).all()
+    if is_admin(current_user):
+        cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
+    else:
+        cases = db.session.scalars(
+            db.select(Case).where(Case.created_by == current_user.id).order_by(Case.created_at.desc())
+        ).all()
     if request.method == "POST":
         uploaded_file = request.files.get("file")
         encryption_password = request.form.get("encryption_password", "")
@@ -206,9 +233,9 @@ def upload():
         if not encryption_password:
             flash("An encryption password is required.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
-        case = db.session.scalar(db.select(Case).where(Case.id == case_id, Case.created_by == current_user.id))
-        if case is None:
-            flash("Please select a valid case.", "error")
+        case = db.session.get(Case, case_id) if case_id else None
+        if not can_access_case(current_user, case):
+            flash("You are not authorized to upload to this case.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
         if category not in DOCUMENT_CATEGORIES:
             flash("Invalid document category.", "error")
@@ -251,10 +278,10 @@ def upload():
 @app.route("/download/<int:file_id>", methods=["GET", "POST"])
 @login_required
 def download(file_id):
-    stored_file = db.session.scalar(db.select(StoredFile).where(
-        StoredFile.id == file_id, StoredFile.user_id == current_user.id))
-    if stored_file is None:
-        flash("File not found.", "error")
+    stored_file = db.session.get(StoredFile, file_id)
+    case_document = stored_file.case_document if stored_file else None
+    if not can_download_document(current_user, case_document):
+        flash("File not found or download access denied.", "error")
         return redirect(url_for("dashboard"))
     if request.method == "GET":
         return render_template("download.html", file=stored_file)
@@ -281,10 +308,14 @@ def download(file_id):
 @app.route("/delete/<int:file_id>", methods=["POST"])
 @login_required
 def delete_file(file_id):
-    stored_file = db.session.scalar(db.select(StoredFile).where(
-        StoredFile.id == file_id, StoredFile.user_id == current_user.id))
-    if stored_file is None:
+    stored_file = db.session.get(StoredFile, file_id)
+    case_document = stored_file.case_document if stored_file else None
+    if stored_file is None or case_document is None:
         flash("File not found.", "error")
+        return redirect(url_for("dashboard"))
+    case = case_document.case
+    if not (is_admin(current_user) or (case and case.created_by == current_user.id)):
+        flash("You are not authorized to delete this document.", "error")
         return redirect(url_for("dashboard"))
     try:
         delete_encrypted_file(stored_file.encrypted_filename)
@@ -299,6 +330,74 @@ def delete_file(file_id):
         db.session.rollback()
         flash("The file could not be deleted.", "error")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/documents/<int:document_id>/share", methods=["POST"])
+@login_required
+def share_document(document_id):
+    document = db.session.get(CaseDocument, document_id)
+    if document is None or not can_access_case(current_user, document.case):
+        flash("Document not found or sharing access denied.", "error")
+        return redirect(url_for("dashboard"))
+    email = request.form.get("email", "").strip().lower()
+    user = db.session.scalar(db.select(User).where(User.email == email))
+    if user is None:
+        flash("The selected recipient does not have an account.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    if user.id == current_user.id:
+        flash("You cannot share a document with yourself.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    expires_at = parse_expiry(request.form.get("expires_at", ""))
+    if request.form.get("expires_at") and expires_at is None:
+        flash("Invalid sharing expiry date.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    if expires_at and expires_at <= datetime.now(timezone.utc):
+        flash("Sharing expiry must be in the future.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    existing = db.session.scalar(db.select(DocumentShare).where(
+        DocumentShare.case_document_id == document.id,
+        DocumentShare.shared_with_user_id == user.id,
+    ))
+    if existing:
+        existing.can_view = True
+        existing.can_download = request.form.get("can_download") == "on"
+        existing.can_manage = request.form.get("can_manage") == "on"
+        existing.expires_at = expires_at
+    else:
+        db.session.add(DocumentShare(
+            case_document_id=document.id,
+            shared_with_user_id=user.id,
+            shared_by_user_id=current_user.id,
+            can_view=True,
+            can_download=request.form.get("can_download") == "on",
+            can_manage=request.form.get("can_manage") == "on",
+            expires_at=expires_at,
+        ))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("The document could not be shared.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    flash("Document sharing permissions saved.", "success")
+    return redirect(url_for("case_detail", case_id=document.case_id))
+
+
+@app.route("/documents/<int:document_id>/shares/<int:share_id>/revoke", methods=["POST"])
+@login_required
+def revoke_share(document_id, share_id):
+    document = db.session.get(CaseDocument, document_id)
+    share = db.session.get(DocumentShare, share_id)
+    if document is None or share is None or share.case_document_id != document.id:
+        flash("Share not found.", "error")
+        return redirect(url_for("dashboard"))
+    if not can_access_case(current_user, document.case):
+        flash("You are not authorized to revoke this share.", "error")
+        return redirect(url_for("dashboard"))
+    db.session.delete(share)
+    db.session.commit()
+    flash("Document share revoked.", "success")
+    return redirect(url_for("case_detail", case_id=document.case_id))
 
 
 @app.route("/logout")
