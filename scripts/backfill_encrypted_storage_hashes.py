@@ -2,9 +2,20 @@
 
 Run after applying migration 0006. This intentionally hashes the encrypted
 bytes as stored, without changing the existing plaintext document hash.
+
+The script adds the repository root to ``sys.path`` so it can be executed
+reliably from the project root with::
+
+    python scripts\\backfill_encrypted_storage_hashes.py
 """
 
 import hashlib
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app import app, read_encrypted_file
 from extensions import db
