@@ -4,6 +4,23 @@ All notable changes for the PS 26190 development track are recorded here.
 
 ## [Unreleased]
 
+### Phase 2A — RBAC Application Integration
+- Enforced deny-by-default authorization on case access, case uploads, document downloads, and document deletion.
+- Added administrator access to the protected case/document operations.
+- Added recipient-aware shared-document access to the dashboard.
+- Added explicit download permission and expiry enforcement for shared documents.
+- Added secure document sharing and share-revocation routes for case owners/administrators.
+- Added future-expiry validation and recipient account validation for shares.
+- Added authorization unit tests covering ownership, administrator access, sharing, download permissions, and expired shares.
+
+### Phase 2 — RBAC Foundation
+- Added user roles with a safe default role.
+- Added deny-by-default authorization helpers.
+- Added administrator, case-owner, and shared-document authorization primitives.
+- Added expiring document shares with view/download/manage permissions.
+- Added Alembic migration `0002_rbac_and_sharing`.
+- Added Phase 2 RBAC design documentation.
+
 ### Phase 1.1 — Database Migration System
 - Added Alembic configuration and migration environment.
 - Added an initial migration for the current application schema.
@@ -31,4 +48,4 @@ All notable changes for the PS 26190 development track are recorded here.
 - Confirmed the existing `.gitignore` excludes `.env`, virtual environments, caches, instance data, uploads, databases, and editor settings.
 
 ### Next
-- Phase 2: Role-Based Access Control and Secure Sharing.
+- Phase 2B: Role management and deeper secure-sharing workflow.
