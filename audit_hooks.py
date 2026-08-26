@@ -3,13 +3,14 @@
 import hashlib
 import os
 
-from flask import flash, g, has_request_context, redirect, render_template, request, url_for
+from flask import flash, g, has_request_context, redirect, request, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 
 from config import Config
+from crypto.encryption import decrypt_file
 from extensions import db
 from models.audit_log import AuditLog
 from models.case import Case
@@ -87,7 +88,7 @@ def _sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def _write_integrity_failure(file_record, expected, actual):
+def _write_integrity_failure(file_record, expected, actual, check_type="encrypted storage"):
     db.session.add(AuditLog(
         user_id=_request_user_id(),
         action="INTEGRITY_FAILURE",
@@ -96,7 +97,7 @@ def _write_integrity_failure(file_record, expected, actual):
         case_id=file_record.case_document.case_id if file_record.case_document else None,
         success=False,
         ip_address=_ip_address(),
-        details=f"Encrypted storage SHA-256 mismatch: expected {expected}, received {actual}"[:500],
+        details=f"{check_type} SHA-256 mismatch: expected {expected}, received {actual}"[:500],
     ))
     db.session.commit()
 
@@ -121,15 +122,49 @@ def _verify_download_integrity():
 
     try:
         encrypted_data = _storage_bytes(stored_file.encrypted_filename)
-        actual = _sha256(encrypted_data)
+        actual_encrypted_hash = _sha256(encrypted_data)
     except (FileNotFoundError, OSError, ValueError):
-        _write_integrity_failure(stored_file, stored_file.encrypted_sha256_hash, "MISSING_OR_UNREADABLE")
+        _write_integrity_failure(
+            stored_file,
+            stored_file.encrypted_sha256_hash,
+            "MISSING_OR_UNREADABLE",
+        )
         flash("Document integrity could not be verified. Download blocked.", "error")
         return redirect(url_for("dashboard"))
-    if actual != stored_file.encrypted_sha256_hash:
-        _write_integrity_failure(stored_file, stored_file.encrypted_sha256_hash, actual)
+
+    if actual_encrypted_hash != stored_file.encrypted_sha256_hash:
+        _write_integrity_failure(
+            stored_file,
+            stored_file.encrypted_sha256_hash,
+            actual_encrypted_hash,
+        )
         flash("Document integrity verification failed. Download blocked.", "error")
         return redirect(url_for("dashboard"))
+
+    # Verify the plaintext hash as well. This protects the document-level
+    # integrity guarantee independently from the encrypted storage-object hash.
+    decryption_password = request.form.get("decryption_password", "")
+    if not decryption_password or not stored_file.sha256_hash:
+        return None
+
+    try:
+        decrypted_data = decrypt_file(encrypted_data, decryption_password)
+        actual_plaintext_hash = _sha256(decrypted_data)
+    except Exception:
+        # The download route remains responsible for reporting authentication
+        # and decryption failures without leaking integrity details.
+        return None
+
+    if actual_plaintext_hash != stored_file.sha256_hash:
+        _write_integrity_failure(
+            stored_file,
+            stored_file.sha256_hash,
+            actual_plaintext_hash,
+            "document",
+        )
+        flash("Document integrity verification failed. Download blocked.", "error")
+        return redirect(url_for("dashboard"))
+
     return None
 
 
