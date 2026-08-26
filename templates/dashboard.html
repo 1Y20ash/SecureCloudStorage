@@ -9,18 +9,27 @@
 
   <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ cases|length }}</div><div class="small text-secondary">Cases</div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ files|length }}</div><div class="small text-secondary">Encrypted documents</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ files|length }}</div><div class="small text-secondary">Owned documents</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ shared_documents|length }}</div><div class="small text-secondary">Shared with me</div></div></div></div>
     <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">AES-256</div><div class="small text-secondary">Encryption</div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">10 MB</div><div class="small text-secondary">Current upload limit</div></div></div></div>
   </div>
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="card-header bg-white border-0 p-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">My Cases</h2><p class="text-secondary mb-0">Investigation cases and their protected documents.</p></div><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">Create Case</a></div></div>
+    <div class="card-header bg-white border-0 p-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">My Cases</h2><p class="text-secondary mb-0">Cases you own or administer.</p></div><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">Create Case</a></div></div>
     {% if cases %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case ID</th><th>Title</th><th>Department</th><th>Status</th><th>Documents</th><th class="text-end pe-4">Action</th></tr></thead><tbody>{% for case in cases %}<tr><td class="ps-4 fw-semibold">{{ case.case_number }}</td><td>{{ case.title }}</td><td>{{ case.department or '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td>{{ case.documents|length }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('case_detail', case_id=case.id) }}">Open Case →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No cases yet</h3><p class="text-secondary">Create your first case to start organizing protected documents.</p><a class="btn btn-success rounded-3" href="{{ url_for('create_case') }}">Create your first case</a></div>{% endif %}
   </div>
 
+  {% if shared_documents %}
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Shared With Me</h2><p class="text-secondary mb-0">Documents explicitly shared with your account.</p></div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Document</th><th>Case</th><th>Category</th><th class="text-end pe-4">Action</th></tr></thead><tbody>
+    {% for document in shared_documents %}<tr><td class="ps-4 fw-medium">{{ document.stored_file.original_filename }}</td><td>{{ document.case.case_number }}</td><td>{{ document.category }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('download', file_id=document.stored_file.id) }}">Open →</a></td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  {% endif %}
+
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-    <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Encrypted Documents</h2><p class="text-secondary mb-0">Existing SecureCloudStorage files remain available.</p></div>
+    <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Encrypted Documents</h2><p class="text-secondary mb-0">Documents owned by your account.</p></div>
     {% if files %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">File Name</th><th>Size</th><th>Protected On</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead><tbody>{% for file in files %}<tr><td class="ps-4 fw-medium">{{ file.original_filename }}</td><td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td><td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td><td><span class="badge rounded-pill text-bg-success">Encrypted</span></td><td class="pe-4 text-end"><a class="btn btn-sm btn-outline-success" href="{{ url_for('download', file_id=file.id) }}">Download →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">No encrypted documents yet.</p></div>{% endif %}
   </div>
 </div>
