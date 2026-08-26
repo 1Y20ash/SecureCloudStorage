@@ -11,6 +11,7 @@ class StoredFile(db.Model):
     original_filename = db.Column(db.String(255), nullable=False)
     encrypted_filename = db.Column(db.String(255), unique=True, nullable=False)
     file_size = db.Column(db.Integer, nullable=False)
+    sha256_hash = db.Column(db.String(64), nullable=True, index=True)
     uploaded_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

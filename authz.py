@@ -34,10 +34,20 @@ def share_is_active(share):
 def has_case_assignment(user, case):
     if not user.is_authenticated or case is None:
         return False
-    return any(assignment.user_id == user.id for assignment in case.assignments)
+    # Keep authorization helpers safe for lightweight test doubles and for
+    # partially loaded objects: absence of assignments means no assignment.
+    assignments = getattr(case, "assignments", ()) or ()
+    return any(assignment.user_id == user.id for assignment in assignments)
 
 
 def can_manage_case(user, case):
+    if not user.is_authenticated or case is None:
+        return False
+    return is_admin(user) or case.created_by == user.id
+
+
+def can_manage_case_assignments(user, case):
+    """Only admins and case owners may add or remove case assignments."""
     if not user.is_authenticated or case is None:
         return False
     return is_admin(user) or case.created_by == user.id
