@@ -43,6 +43,13 @@ def can_manage_case(user, case):
     return is_admin(user) or case.created_by == user.id
 
 
+def can_manage_case_assignments(user, case):
+    """Only admins and case owners may add or remove case assignments."""
+    if not user.is_authenticated or case is None:
+        return False
+    return is_admin(user) or case.created_by == user.id
+
+
 def can_access_case(user, case):
     if not user.is_authenticated or case is None:
         return False
