@@ -309,11 +309,5 @@ def logout():
     return redirect(url_for("home"))
 
 
-# Create newly introduced DMS tables without altering existing tables.
-# This is intentionally limited to table creation; future schema changes should use migrations.
-with app.app_context():
-    db.create_all()
-
-
 if __name__ == "__main__":
     app.run(debug=True)
