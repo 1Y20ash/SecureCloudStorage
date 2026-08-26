@@ -4,6 +4,16 @@ All notable changes for the PS 26190 development track are recorded here.
 
 ## [Unreleased]
 
+### Phase 2B — Role Management & Case Assignment
+- Added explicit case assignments for authorized stakeholders.
+- Added `0003_case_assignments` Alembic migration.
+- Added case assignment uniqueness and assignment actor/timestamp tracking.
+- Integrated assigned users into case authorization and dashboard visibility.
+- Added case assignment management and removal UI.
+- Added Admin user-role management UI with self-demotion protection.
+- Added Phase 2B authorization/security tests.
+- Added free pytest dependency for the test suite.
+
 ### Phase 2A — RBAC Application Integration
 - Enforced deny-by-default authorization on case access, case uploads, document downloads, and document deletion.
 - Added administrator access to the protected case/document operations.
@@ -11,7 +21,6 @@ All notable changes for the PS 26190 development track are recorded here.
 - Added explicit download permission and expiry enforcement for shared documents.
 - Added secure document sharing and share-revocation routes for case owners/administrators.
 - Added future-expiry validation and recipient account validation for shares.
-- Added authorization unit tests covering ownership, administrator access, sharing, download permissions, and expired shares.
 
 ### Phase 2 — RBAC Foundation
 - Added user roles with a safe default role.
@@ -48,4 +57,4 @@ All notable changes for the PS 26190 development track are recorded here.
 - Confirmed the existing `.gitignore` excludes `.env`, virtual environments, caches, instance data, uploads, databases, and editor settings.
 
 ### Next
-- Phase 2B: Role management and deeper secure-sharing workflow.
+- Phase 3: Audit Trail & Document Integrity.
