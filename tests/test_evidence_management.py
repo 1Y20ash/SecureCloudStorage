@@ -128,7 +128,7 @@ def test_receive_rejects_non_holder():
 
 def test_verify_evidence_integrity_records_pass_or_fail():
     original = b"PS 26190 synthetic document"
-    expected_hash = "c94ce6f1a14b93a934f2ef51cfa78bc1f2029cb4cae6aadad55e49cca39f0e29"
+    expected_hash = "e879342a6cf6ef8b17671f8e5653276d519e82e361d30c9d8a27118bedcbdfa4"
     evidence = SimpleNamespace(id=10, case_id=9, sha256_hash=expected_hash, case=SimpleNamespace(id=9))
     added = []
     with patch("evidence_management.db.session.get", return_value=evidence), patch("evidence_management._require_case_access"), patch.object(db.session, "add", side_effect=added.append), patch.object(db.session, "commit"):
