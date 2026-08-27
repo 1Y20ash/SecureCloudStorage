@@ -50,18 +50,7 @@ def _add_custody_event(evidence, action, actor_user_id, *, from_user_id=None, to
     return event
 
 
-def create_evidence(
-    *,
-    case_id,
-    evidence_type,
-    description,
-    collected_by,
-    collection_location,
-    collection_datetime,
-    sha256_hash,
-    actor_user_id,
-    stored_file_id=None,
-):
+def create_evidence(*, case_id, evidence_type, description, collected_by, collection_location, collection_datetime, sha256_hash, actor_user_id, stored_file_id=None):
     """Create an evidence record and its initial COLLECTED custody event."""
     case = db.session.get(Case, case_id)
     if case is None:
@@ -93,13 +82,7 @@ def create_evidence(
     )
     db.session.add(evidence)
     db.session.flush()
-    _add_custody_event(
-        evidence,
-        Evidence.STATUS_COLLECTED.upper(),
-        actor_user_id,
-        to_user_id=collected_by,
-        notes="Evidence collected",
-    )
+    _add_custody_event(evidence, Evidence.STATUS_COLLECTED.upper(), actor_user_id, to_user_id=collected_by, notes="Evidence collected")
     db.session.commit()
     return evidence
 
@@ -113,17 +96,10 @@ def transition_evidence(evidence_id, target_status, actor_user_id, notes=None):
 
     expected_status = TRANSITIONS.get(evidence.status)
     if expected_status != target_status:
-        raise ValueError(
-            f"Invalid evidence transition: {evidence.status} -> {target_status}"
-        )
+        raise ValueError(f"Invalid evidence transition: {evidence.status} -> {target_status}")
 
     evidence.status = target_status
-    _add_custody_event(
-        evidence,
-        target_status.upper(),
-        actor_user_id,
-        notes=notes,
-    )
+    _add_custody_event(evidence, target_status.upper(), actor_user_id, notes=notes)
     db.session.commit()
     return evidence
 
@@ -139,6 +115,8 @@ def transfer_evidence(evidence_id, to_user_id, actor_user_id, notes=None):
         raise ValueError("Evidence can only be transferred after upload")
     if evidence.current_holder is None:
         raise ValueError("Evidence has no current holder")
+    if evidence.current_holder != actor_user_id:
+        raise PermissionError("Only the current holder can transfer evidence")
     if to_user_id is None or db.session.get(User, to_user_id) is None:
         raise ValueError("Recipient not found")
     if to_user_id == evidence.current_holder:
@@ -148,28 +126,8 @@ def transfer_evidence(evidence_id, to_user_id, actor_user_id, notes=None):
     from_user_id = evidence.current_holder
     evidence.current_holder = to_user_id
     evidence.status = Evidence.STATUS_TRANSFERRED
-    _add_custody_event(
-        evidence,
-        Evidence.STATUS_TRANSFERRED.upper(),
-        actor_user_id,
-        from_user_id=from_user_id,
-        to_user_id=to_user_id,
-        notes=notes or "Evidence custody transferred",
-    )
-    db.session.add(
-        AuditLog(
-            user_id=actor_user_id,
-            action="EVIDENCE_TRANSFER",
-            resource_type="Evidence",
-            resource_id=evidence.id,
-            case_id=evidence.case_id,
-            success=True,
-            details=(
-                f"Evidence {evidence.evidence_id} transferred from user "
-                f"{from_user_id} to user {to_user_id}"
-            )[:500],
-        )
-    )
+    _add_custody_event(evidence, Evidence.STATUS_TRANSFERRED.upper(), actor_user_id, from_user_id=from_user_id, to_user_id=to_user_id, notes=notes or "Evidence custody transferred")
+    db.session.add(AuditLog(user_id=actor_user_id, action="EVIDENCE_TRANSFER", resource_type="Evidence", resource_id=evidence.id, case_id=evidence.case_id, success=True, details=(f"Evidence {evidence.evidence_id} transferred from user {from_user_id} to user {to_user_id}")[:500]))
     db.session.commit()
     return evidence
 
