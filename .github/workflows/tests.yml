@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: ["main", "feature/ps-26190-dms", "feature/ps-26190-phase2-rbac", "feature/ps-26190-phase3-audit-integrity"]
+    branches: ["main", "feature/ps-26190-dms", "feature/ps-26190-phase2-rbac", "feature/ps-26190-phase3-audit-integrity", "feature/phase5-evidence-chain-of-custody"]
   pull_request:
 
 jobs:
