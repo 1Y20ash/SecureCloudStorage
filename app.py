@@ -1,7 +1,14 @@
 import io
 import os
 import secrets
+import hashlib
 from datetime import datetime, timezone
+
+from models.audit_log import AuditLog
+from models.document_version import DocumentVersion
+from models.evidence_custody import EvidenceCustody
+from evidentiary import get_next_version, get_previous_hash
+from document_lifecycle import restore_document_version, transition_document
 
 from cryptography.exceptions import InvalidTag
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
@@ -104,6 +111,10 @@ def parse_expiry(value):
         return parsed.astimezone(timezone.utc)
     except ValueError:
         return None
+
+
+def calculate_sha256(file_bytes):
+    return hashlib.sha256(file_bytes).hexdigest()
 
 
 @app.route("/")
@@ -274,18 +285,50 @@ def upload():
         if len(file_bytes) > MAX_FILE_SIZE:
             flash("File size must be 10 MB or less.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
+        sha256_hash = calculate_sha256(file_bytes)
         encrypted_data = encrypt_file(file_bytes, encryption_password)
         encrypted_filename = f"{secrets.token_hex(16)}.enc"
         storage_uploaded = False
         try:
             store_encrypted_file(encrypted_filename, encrypted_data)
             storage_uploaded = True
-            stored_file = StoredFile(user_id=current_user.id, original_filename=original_filename,
-                                     encrypted_filename=encrypted_filename, file_size=len(file_bytes))
+            stored_file = StoredFile(
+                user_id=current_user.id,
+                original_filename=original_filename,
+                encrypted_filename=encrypted_filename,
+                file_size=len(file_bytes),
+                sha256_hash=sha256_hash,
+            )
             db.session.add(stored_file)
             db.session.flush()
-            db.session.add(CaseDocument(case_id=case.id, stored_file_id=stored_file.id,
-                                        category=category, version=1, status="Draft"))
+            case_document = CaseDocument(
+                case_id=case.id,
+                stored_file_id=stored_file.id,
+                category=category,
+                version=1,
+                status="Draft",
+            )
+            db.session.add(case_document)
+            db.session.flush()
+            db.session.add(
+                DocumentVersion(
+                    case_document_id=case_document.id,
+                    version=1,
+                    stored_file_id=stored_file.id,
+                    sha256_hash=sha256_hash,
+                    previous_hash=None,
+                    created_by=current_user.id,
+                )
+            )
+            db.session.add(
+                EvidenceCustody(
+                    case_document_id=case_document.id,
+                    action="ACQUIRED",
+                    actor_user_id=current_user.id,
+                    sha256_hash=sha256_hash,
+                    notes="Initial evidence upload",
+                )
+            )
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -299,6 +342,144 @@ def upload():
         flash("Document encrypted and added to the case successfully.", "success")
         return redirect(url_for("case_detail", case_id=case.id))
     return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
+
+
+@app.route("/documents/<int:document_id>/versions", methods=["POST"])
+@login_required
+def create_document_version(document_id):
+    document = db.session.get(CaseDocument, document_id)
+    if document is None or not can_access_case(current_user, document.case):
+        flash("Document not found or access denied.", "error")
+        return redirect(url_for("dashboard"))
+    if not can_manage_case(current_user, document.case):
+        flash("You are not authorized to create a new document version.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    uploaded_file = request.files.get("file")
+    encryption_password = request.form.get("encryption_password", "")
+    if not uploaded_file or not uploaded_file.filename:
+        flash("Please select a file.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    if not encryption_password:
+        flash("An encryption password is required.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    original_filename = secure_filename(uploaded_file.filename)
+    if not original_filename:
+        flash("The selected filename is invalid.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    file_bytes = uploaded_file.read(MAX_FILE_SIZE + 1)
+    if len(file_bytes) > MAX_FILE_SIZE:
+        flash("File size must be 10 MB or less.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    sha256_hash = calculate_sha256(file_bytes)
+    encrypted_data = encrypt_file(file_bytes, encryption_password)
+    encrypted_filename = f"{secrets.token_hex(16)}.enc"
+    next_version = get_next_version(document.id)
+    previous_hash = get_previous_hash(document.id)
+    storage_uploaded = False
+    try:
+        store_encrypted_file(encrypted_filename, encrypted_data)
+        storage_uploaded = True
+        stored_file = StoredFile(
+            user_id=current_user.id,
+            original_filename=original_filename,
+            encrypted_filename=encrypted_filename,
+            file_size=len(file_bytes),
+            sha256_hash=sha256_hash,
+        )
+        db.session.add(stored_file)
+        db.session.flush()
+        db.session.add(
+            DocumentVersion(
+                case_document_id=document.id,
+                version=next_version,
+                stored_file_id=stored_file.id,
+                sha256_hash=sha256_hash,
+                previous_hash=previous_hash,
+                created_by=current_user.id,
+            )
+        )
+        document.stored_file_id = stored_file.id
+        document.version = next_version
+        db.session.add(
+            EvidenceCustody(
+                case_document_id=document.id,
+                action="VERSION_CREATED",
+                actor_user_id=current_user.id,
+                sha256_hash=sha256_hash,
+                notes=f"Created document version {next_version}",
+            )
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if storage_uploaded:
+            try:
+                delete_encrypted_file(encrypted_filename)
+            except Exception:
+                pass
+        flash("The new document version could not be created.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    flash(f"Document version {next_version} created successfully.", "success")
+    return redirect(url_for("case_detail", case_id=document.case_id))
+
+
+@app.route("/documents/<int:document_id>/lifecycle", methods=["POST"])
+@login_required
+def transition_document_lifecycle(document_id):
+    document = db.session.get(CaseDocument, document_id)
+    if document is None or not can_access_case(current_user, document.case):
+        flash("Document not found or access denied.", "error")
+        return redirect(url_for("dashboard"))
+    if not can_manage_case(current_user, document.case):
+        flash("You are not authorized to change document lifecycle state.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    new_status = request.form.get("status", "").strip()
+    change_description = request.form.get("change_description", "").strip() or None
+    if new_status not in DocumentVersion.LIFECYCLE_STATUSES:
+        flash("Invalid document lifecycle state.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    try:
+        transition_document(document, new_status, current_user.id, change_description)
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    except Exception:
+        db.session.rollback()
+        flash("The document lifecycle transition could not be saved.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    flash(f"Document lifecycle changed to {new_status}.", "success")
+    return redirect(url_for("case_detail", case_id=document.case_id))
+
+
+@app.route("/documents/<int:document_id>/versions/<int:version_number>/restore", methods=["POST"])
+@login_required
+def restore_document_version_route(document_id, version_number):
+    document = db.session.get(CaseDocument, document_id)
+    if document is None or not can_access_case(current_user, document.case):
+        flash("Document not found or access denied.", "error")
+        return redirect(url_for("dashboard"))
+    if not can_manage_case(current_user, document.case):
+        flash("You are not authorized to restore this document version.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    reason = request.form.get("reason", "").strip() or None
+    if reason is None:
+        flash("A restoration reason is required.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    try:
+        restore_document_version(document, version_number, current_user.id, reason=reason)
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    except Exception:
+        db.session.rollback()
+        flash("The document version could not be restored.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    flash(f"Version {version_number} restored as a new Draft version.", "success")
+    return redirect(url_for("case_detail", case_id=document.case_id))
 
 
 @app.route("/download/<int:file_id>", methods=["GET", "POST"])
@@ -433,7 +614,6 @@ def manage_case_assignments(case_id):
     if not can_manage_case_assignments(current_user, case):
         flash("You are not authorized to manage case assignments.", "error")
         return redirect(url_for("dashboard"))
-
     if request.method == "POST":
         user_id = request.form.get("user_id", type=int)
         user = db.session.get(User, user_id) if user_id else None
@@ -462,7 +642,6 @@ def manage_case_assignments(case_id):
             return redirect(url_for("manage_case_assignments", case_id=case.id))
         flash(f"{user.name} was assigned to {case.case_number}.", "success")
         return redirect(url_for("manage_case_assignments", case_id=case.id))
-
     assigned_ids = {assignment.user_id for assignment in case.assignments}
     available_users = db.session.scalars(
         db.select(User).where(User.id != case.created_by).order_by(User.name.asc())
