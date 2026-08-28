@@ -8,6 +8,7 @@ import base64
 import hashlib
 import os
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.fernet import Fernet
@@ -105,7 +106,7 @@ def verify_signature(record, document_bytes):
     try:
         public_key = Ed25519PublicKey.from_public_bytes(record.public_key)
         public_key.verify(record.signature, record.document_hash.encode("ascii"))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidSignature):
         record.verification_status = VERIFICATION_INVALID
         db.session.commit()
         return False
