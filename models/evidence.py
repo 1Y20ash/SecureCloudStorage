@@ -67,8 +67,14 @@ def _prevent_evidence_identity_change(mapper, connection, target):
     """Evidence identity and its recorded integrity hash cannot be rewritten."""
     history = inspect(target)
 
-    if history.attrs.evidence_id.history.has_changes():
+    evidence_id_history = history.attrs.evidence_id.history
+    sha256_history = history.attrs.sha256_hash.history
+
+    # A transient object has no persisted/deleted value yet. SQLAlchemy can
+    # therefore report its initial assignment as a change. Immutability must
+    # only reject changes to values that already existed on a persisted row.
+    if evidence_id_history.has_changes() and evidence_id_history.deleted:
         raise ValueError("Evidence identifiers are immutable")
 
-    if history.attrs.sha256_hash.history.has_changes():
+    if sha256_history.has_changes() and sha256_history.deleted:
         raise ValueError("SHA-256 hashes are immutable")
