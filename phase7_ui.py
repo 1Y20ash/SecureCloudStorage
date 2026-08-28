@@ -7,7 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 
-from authz import can_access_case
+from authz import can_access_case, can_access_document
 from crypto.encryption import decrypt_file
 from extensions import db
 from models.case import Case
@@ -25,12 +25,16 @@ def _accessible_documents():
     documents = db.session.scalars(
         db.select(CaseDocument).order_by(CaseDocument.created_at.desc())
     ).all()
-    return [document for document in documents if can_access_case(current_user, document.case)]
+    return [
+        document
+        for document in documents
+        if can_access_document(current_user, document)
+    ]
 
 
 def _document_or_404(document_id):
     document = db.session.get(CaseDocument, document_id)
-    if document is None or not can_access_case(current_user, document.case):
+    if document is None or not can_access_document(current_user, document):
         return None
     return document
 
