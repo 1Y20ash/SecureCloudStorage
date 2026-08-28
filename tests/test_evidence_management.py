@@ -14,7 +14,12 @@ from evidence_management import (
 )
 from extensions import db
 from models.case import Case
-from models.evidence import Evidence
+from models.evidence import Evidence, _prevent_evidence_identity_change
+from models.evidence_custody import (
+    EvidenceCustody,
+    _prevent_custody_event_delete,
+    _prevent_custody_event_update,
+)
 from models.user import User
 
 
@@ -147,3 +152,25 @@ def test_get_custody_chain_returns_events_in_model_order():
     evidence = SimpleNamespace(id=10, custody_events=events)
     with patch("evidence_management.db.session.get", return_value=evidence):
         assert get_custody_chain(10) == events
+
+
+def test_custody_event_update_is_rejected():
+    with pytest.raises(ValueError, match="append-only"):
+        _prevent_custody_event_update(None, None, SimpleNamespace())
+
+
+def test_custody_event_delete_is_rejected():
+    with pytest.raises(ValueError, match="append-only"):
+        _prevent_custody_event_delete(None, None, SimpleNamespace())
+
+
+def test_evidence_identity_and_hash_are_immutable():
+    evidence = Evidence(evidence_id="EVD-ABC123", sha256_hash="a" * 64)
+    evidence.evidence_id = "EVD-CHANGED"
+    with pytest.raises(ValueError, match="identifiers are immutable"):
+        _prevent_evidence_identity_change(None, None, evidence)
+
+    evidence = Evidence(evidence_id="EVD-ABC123", sha256_hash="a" * 64)
+    evidence.sha256_hash = "b" * 64
+    with pytest.raises(ValueError, match="SHA-256 hashes are immutable"):
+        _prevent_evidence_identity_change(None, None, evidence)
