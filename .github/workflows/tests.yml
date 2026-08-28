@@ -71,9 +71,9 @@ jobs:
       - name: Install security scanners
         run: python -m pip install bandit pip-audit
       - name: Bandit static security scan
-        run: bandit -r . -x ./tests -f json -o bandit-report.json || true
+        run: bandit -r . -x ./tests -f json -o bandit-report.json
       - name: Dependency vulnerability audit
-        run: pip-audit -r requirements.txt -f json -o pip-audit-report.json || true
+        run: pip-audit -r requirements.txt -f json -o pip-audit-report.json
       - name: Upload security reports
         if: always()
         uses: actions/upload-artifact@v4
