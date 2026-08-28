@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Digital Signatures — SecureCloudStorage{% endblock %}
+{% block content %}
+<section class="py-4 py-lg-5">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">Phase 6 • Digital Signatures</span>
+      <h1 class="display-6 fw-semibold mt-3 mb-2">Digital Signatures</h1>
+      <p class="text-secondary mb-0">Create and verify cryptographic signatures for important documents.</p>
+    </div>
+    <a class="btn btn-primary rounded-3 px-4" href="{{ url_for('phase6_ui.signature_new') }}">+ Sign document</a>
+  </div>
+
+  <div class="alert alert-warning rounded-4 border-0 shadow-sm">
+    <strong>Prototype notice:</strong> verification here proves technical cryptographic authenticity and integrity only. It does <strong>not</strong> establish statutory or legally recognized digital-signature validity.
+  </div>
+
+  {% if signatures %}
+  <div class="row g-4 mt-1">
+    {% for signature in signatures %}
+    <div class="col-12 col-xl-6">
+      <article class="card border-0 shadow-sm h-100 rounded-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+              <div class="small text-secondary">Signed by</div>
+              <div class="h5 fw-semibold mb-0">{{ signature.signer_name }}</div>
+            </div>
+            <span class="badge rounded-pill {% if signature.verification_status == 'VALID' %}text-bg-success{% elif signature.verification_status == 'INVALID' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{{ signature.verification_status }}</span>
+          </div>
+          <div class="small text-secondary mt-3">{{ signature.signed_at }}</div>
+          <div class="bg-light p-3 rounded-3 mt-3">
+            <div class="small text-secondary">SHA-256 document hash</div>
+            <code class="small text-break">{{ signature.document_hash }}</code>
+          </div>
+          <a class="btn btn-outline-primary rounded-3 mt-3" href="{{ url_for('phase6_ui.signature_detail', signature_id=signature.id) }}">View & verify</a>
+        </div>
+      </article>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card-body p-5 text-center">
+      <div class="display-5 mb-3">✍️</div>
+      <h2 class="h4 fw-semibold">No signed records yet</h2>
+      <p class="text-secondary mb-4">Create a technical digital signature for an important document.</p>
+      <a class="btn btn-primary rounded-3 px-4" href="{{ url_for('phase6_ui.signature_new') }}">Sign your first document</a>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign Document — SecureCloudStorage{% endblock %}
+{% block content %}
+<section class="py-4 py-lg-5">
+  <div class="mb-4">
+    <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">Phase 6</span>
+    <h1 class="display-6 fw-semibold mt-3 mb-2">Sign a Document</h1>
+    <p class="text-secondary">SHA-256 the document, then sign that digest with your Ed25519 signing key.</p>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4 p-lg-5">
+      <form method="post" enctype="multipart/form-data">
+        <div class="mb-4">
+          <label class="form-label fw-semibold" for="document">Document</label>
+          <input class="form-control" id="document" name="document" type="file" required>
+          <div class="form-text">Maximum 10 MB. The uploaded bytes are hashed and signed; the private key is never exposed to the browser.</div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold" for="case_document_id">Optional case document</label>
+          <select class="form-select" id="case_document_id" name="case_document_id">
+            <option value="">No case association</option>
+            {% for document in documents %}
+            <option value="{{ document.id }}">Case {{ document.case.case_number }} — {{ document.stored_file.original_filename }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="alert alert-info rounded-3">
+          <strong>Technical prototype:</strong> this signature demonstrates cryptographic authenticity/integrity. It is not a claim of statutory or legally recognized digital-signature status.
+        </div>
+        <button class="btn btn-primary rounded-3 px-4" type="submit">Create digital signature</button>
+        <a class="btn btn-link" href="{{ url_for('phase6_ui.signature_list') }}">Cancel</a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
