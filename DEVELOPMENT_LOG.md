@@ -144,6 +144,50 @@ Case assignment grants case-level access. It does not bypass independent documen
 - [ ] Execute test suite in the deployment/CI environment.
 - [ ] Final PR merge and version tag.
 
+## Phase 5 — Evidence Management & Chain of Custody
+
+**Status:** Completed on `feature/phase5-evidence-chain-of-custody`.
+
+### Implemented Scope
+- Investigation evidence model with unique `EVD-*` identifier.
+- Case association, evidence type, description, collector, current holder, collection metadata, lifecycle status, SHA-256 integrity value, and optional encrypted stored-file linkage.
+- Controlled lifecycle: `Collected → Uploaded → Transferred → Examined → Stored → Presented`.
+- One-step lifecycle transition enforcement.
+- Initial `COLLECTED` custody event.
+- Current-holder-only custody transfer after upload.
+- Case-access validation for actors and recipients.
+- Explicit recipient `RECEIVED` custody event and audit record.
+- Ordered custody-chain retrieval.
+- SHA-256 format validation and constant-time integrity verification.
+- Integrity pass/fail audit records.
+- Immutable evidence identifier and SHA-256 integrity value at the SQLAlchemy model layer.
+- Application-level append-only protection for custody history.
+- Alembic migration `0008_evidence_management` linking evidence to the existing custody system.
+- Explicit model registration during application startup.
+- Automated Phase 5 test coverage and CI workflow coverage.
+- Phase 5 implementation documentation.
+
+### Phase 5 Completion Criteria
+- [x] Evidence model and database migration.
+- [x] Evidence lifecycle and transition enforcement.
+- [x] Initial acquisition custody event.
+- [x] Current-holder custody transfer authorization.
+- [x] Explicit recipient receipt.
+- [x] Custody-chain retrieval.
+- [x] SHA-256 validation and integrity verification.
+- [x] Integrity audit records.
+- [x] Immutable evidence identity and integrity hash.
+- [x] Append-only custody event protection.
+- [x] Automated tests.
+- [x] CI workflow coverage.
+- [x] Documentation.
+- [x] Version-controlled Phase 5 branch.
+
+### Phase 5 Verification Baseline
+- Local test suite: 45 tests passed before final immutability-hardening tests.
+- Final Phase 5 changes add dedicated tests for custody-event immutability and evidence identity/hash immutability.
+- Development and demonstration data remains synthetic only.
+
 ## Next Phase
 
-**Phase 3 — Audit Trail & Document Integrity**
+Phase 5 is complete. The next phase may begin only from this verified Phase 5 baseline.
