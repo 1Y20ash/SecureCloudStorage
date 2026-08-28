@@ -33,6 +33,11 @@ class OCRDocument(db.Model):
         nullable=False,
     )
 
+
+    case_document = db.relationship(
+        "CaseDocument",
+        back_populates="ocr_document",
+    )
     __table_args__ = (
         Index("ix_ocr_documents_source_sha256", "source_sha256"),
         Index("ix_ocr_documents_status", "status"),
