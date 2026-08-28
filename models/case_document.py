@@ -26,3 +26,6 @@ class CaseDocument(db.Model):
 
     case = db.relationship("Case", back_populates="documents")
     stored_file = db.relationship("StoredFile", backref=db.backref("case_document", uselist=False))
+    ocr_document = db.relationship(
+        "OCRDocument", back_populates="case_document", uselist=False, cascade="all, delete-orphan"
+    )
