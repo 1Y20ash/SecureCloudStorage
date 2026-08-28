@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from extensions import db
+from sqlalchemy import event, inspect
 
 
 class Evidence(db.Model):
@@ -59,3 +60,13 @@ class Evidence(db.Model):
         lazy=True,
         cascade="all, delete-orphan",
     )
+
+
+@event.listens_for(Evidence, "before_update")
+def _prevent_evidence_identity_change(mapper, connection, target):
+    """Evidence identity and its recorded integrity hash cannot be rewritten."""
+    history = inspect(target)
+    if history.attrs.evidence_id.history.has_changes():
+        raise ValueError("Evidence identifiers are immutable")
+    if history.attrs.sha256_hash.history.has_changes():
+        raise ValueError("Evidence SHA-256 hashes are immutable")
