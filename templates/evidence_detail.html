@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ evidence.evidence_id }} — SecureVault{% endblock %}
+{% block content %}
+<section class="py-4 py-lg-5">
+  <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+    <div>
+      <a class="small text-secondary text-decoration-none" href="{{ url_for('phase5_ui.evidence_list') }}">← Evidence Vault</a>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-3"><span class="badge text-bg-success-subtle text-success-emphasis rounded-pill">Evidence</span><span class="badge rounded-pill text-bg-light border">{{ evidence.status }}</span></div>
+      <h1 class="display-6 fw-semibold mt-2 mb-1">{{ evidence.evidence_id }}</h1>
+      <p class="text-secondary mb-0">{{ evidence.evidence_type }} • Case {{ evidence.case.case_number }}</p>
+    </div>
+    <a class="btn btn-outline-success align-self-start rounded-3" href="{{ url_for('case_detail', case_id=evidence.case_id) }}">Open case</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-xl-5">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 fw-semibold mb-4">Evidence identity</h2>
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-secondary">Identifier</dt><dd class="col-7 fw-semibold">{{ evidence.evidence_id }}</dd>
+            <dt class="col-5 text-secondary">Type</dt><dd class="col-7">{{ evidence.evidence_type }}</dd>
+            <dt class="col-5 text-secondary">Status</dt><dd class="col-7">{{ evidence.status }}</dd>
+            <dt class="col-5 text-secondary">Collector</dt><dd class="col-7">{{ evidence.collector.name if evidence.collector else 'Unassigned' }}</dd>
+            <dt class="col-5 text-secondary">Current holder</dt><dd class="col-7">{{ evidence.holder.name if evidence.holder else 'Unassigned' }}</dd>
+            <dt class="col-5 text-secondary">Location</dt><dd class="col-7">{{ evidence.collection_location or '—' }}</dd>
+            <dt class="col-5 text-secondary">Collected</dt><dd class="col-7">{{ evidence.collection_datetime.strftime('%d %b %Y, %H:%M UTC') }}</dd>
+          </dl>
+          <div class="evidence-hash mt-4 p-3 rounded-3">
+            <div class="d-flex justify-content-between gap-2"><span class="small text-secondary">Immutable SHA-256</span><span class="badge rounded-pill text-bg-success">LOCKED</span></div>
+            <code class="small text-break d-block mt-2">{{ evidence.sha256_hash }}</code>
+          </div>
+          {% if evidence.description %}<p class="small text-secondary mt-4 mb-0">{{ evidence.description }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-7">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4"><div><h2 class="h5 fw-semibold mb-1">Chain of custody</h2><p class="small text-secondary mb-0">Append-only forensic history</p></div><span class="badge rounded-pill text-bg-light border">{{ chain|length }} event{{ '' if chain|length == 1 else 's' }}</span></div>
+          <div class="custody-timeline">
+            {% for event in chain %}
+            <div class="custody-event position-relative pb-4">
+              <div class="custody-dot"></div>
+              <div class="ms-4 ps-2">
+                <div class="d-flex flex-wrap justify-content-between gap-2"><strong>{{ event.action }}</strong><span class="small text-secondary">{{ event.occurred_at.strftime('%d %b %Y, %H:%M UTC') }}</span></div>
+                <div class="small text-secondary mt-1">Actor: {{ event.actor.name if event.actor else 'Unknown' }}</div>
+                {% if event.from_user or event.to_user %}<div class="small mt-1">{{ event.from_user.name if event.from_user else '—' }} → {{ event.to_user.name if event.to_user else '—' }}</div>{% endif %}
+                {% if event.notes %}<div class="small text-secondary mt-1">{{ event.notes }}</div>{% endif %}
+                <code class="small text-break d-block mt-2">SHA-256: {{ event.sha256_hash }}</code>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    {% set next_status = transitions.get(evidence.status) %}
+    {% if next_status %}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4"><h2 class="h6 fw-semibold">Advance lifecycle</h2><p class="small text-secondary">Move one step only. Current: <strong>{{ evidence.status }}</strong>.</p><form method="post" action="{{ url_for('phase5_ui.evidence_transition', evidence_id=evidence.id) }}"><input type="hidden" name="target_status" value="{{ next_status }}"><textarea class="form-control form-control-sm mb-2" name="notes" rows="2" placeholder="Optional event notes"></textarea><button class="btn btn-success w-100 rounded-3">Mark {{ next_status }}</button></form></div></div>
+    </div>
+    {% endif %}
+
+    {% if evidence.status == 'Uploaded' and evidence.current_holder == current_user.id %}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4"><h2 class="h6 fw-semibold">Transfer custody</h2><p class="small text-secondary">Only the current holder can transfer evidence.</p><form method="post" action="{{ url_for('phase5_ui.evidence_transfer', evidence_id=evidence.id) }}"><select class="form-select form-select-sm mb-2" name="to_user_id" required><option value="">Recipient</option>{% for user in users if user.id != current_user.id %}<option value="{{ user.id }}">{{ user.name }} — {{ user.role }}</option>{% endfor %}</select><textarea class="form-control form-control-sm mb-2" name="notes" rows="2" placeholder="Transfer notes"></textarea><button class="btn btn-outline-success w-100 rounded-3">Record transfer</button></form></div></div>
+    </div>
+    {% endif %}
+
+    {% if evidence.status == 'Transferred' and evidence.current_holder == current_user.id %}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4"><h2 class="h6 fw-semibold">Receive evidence</h2><p class="small text-secondary">Confirm that the current holder has accepted custody.</p><form method="post" action="{{ url_for('phase5_ui.evidence_receive', evidence_id=evidence.id) }}"><textarea class="form-control form-control-sm mb-2" name="notes" rows="2" placeholder="Receipt notes"></textarea><button class="btn btn-outline-success w-100 rounded-3">Confirm receipt</button></form></div></div>
+    </div>
+    {% endif %}
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4"><h2 class="h6 fw-semibold">Verify integrity</h2><p class="small text-secondary">Upload the plaintext evidence to compare its SHA-256 with the immutable record.</p><form method="post" enctype="multipart/form-data" action="{{ url_for('phase5_ui.evidence_verify', evidence_id=evidence.id) }}"><input class="form-control form-control-sm mb-2" type="file" name="integrity_file" required><button class="btn btn-dark w-100 rounded-3">Verify SHA-256</button></form></div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
