@@ -3,13 +3,14 @@
 import hashlib
 import os
 
-from flask import flash, g, has_request_context, redirect, render_template, request, url_for
+from flask import flash, g, has_request_context, redirect, request, url_for
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 
 from config import Config
+from crypto.encryption import decrypt_file
 from extensions import db
 from models.audit_log import AuditLog
 from models.case import Case
@@ -87,7 +88,7 @@ def _sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def _write_integrity_failure(file_record, expected, actual):
+def _write_integrity_failure(file_record, expected, actual, check_type="encrypted storage"):
     db.session.add(AuditLog(
         user_id=_request_user_id(),
         action="INTEGRITY_FAILURE",
@@ -96,7 +97,7 @@ def _write_integrity_failure(file_record, expected, actual):
         case_id=file_record.case_document.case_id if file_record.case_document else None,
         success=False,
         ip_address=_ip_address(),
-        details=f"SHA-256 mismatch: expected {expected}, received {actual}"[:500],
+        details=f"{check_type} SHA-256 mismatch: expected {expected}, received {actual}"[:500],
     ))
     db.session.commit()
 
@@ -108,7 +109,9 @@ def _verify_download_integrity():
     if not file_id or not current_user.is_authenticated:
         return None
     stored_file = db.session.get(StoredFile, file_id)
-    if stored_file is None or not stored_file.sha256_hash:
+    if stored_file is None or not stored_file.encrypted_sha256_hash:
+        # Legacy records created before migration 0006 are temporarily allowed
+        # through until their encrypted storage hash has been backfilled.
         return None
 
     # Authorization is checked before integrity verification so protected
@@ -119,44 +122,95 @@ def _verify_download_integrity():
 
     try:
         encrypted_data = _storage_bytes(stored_file.encrypted_filename)
-        actual = _sha256(encrypted_data)
+        actual_encrypted_hash = _sha256(encrypted_data)
     except (FileNotFoundError, OSError, ValueError):
-        _write_integrity_failure(stored_file, stored_file.sha256_hash, "MISSING_OR_UNREADABLE")
+        _write_integrity_failure(
+            stored_file,
+            stored_file.encrypted_sha256_hash,
+            "MISSING_OR_UNREADABLE",
+        )
         flash("Document integrity could not be verified. Download blocked.", "error")
         return redirect(url_for("dashboard"))
-    if actual != stored_file.sha256_hash:
-        _write_integrity_failure(stored_file, stored_file.sha256_hash, actual)
+
+    if actual_encrypted_hash != stored_file.encrypted_sha256_hash:
+        _write_integrity_failure(
+            stored_file,
+            stored_file.encrypted_sha256_hash,
+            actual_encrypted_hash,
+        )
         flash("Document integrity verification failed. Download blocked.", "error")
         return redirect(url_for("dashboard"))
+
+    # Verify the plaintext hash as well. This protects the document-level
+    # integrity guarantee independently from the encrypted storage-object hash.
+    decryption_password = request.form.get("decryption_password", "")
+    if not decryption_password or not stored_file.sha256_hash:
+        return None
+
+    try:
+        decrypted_data = decrypt_file(encrypted_data, decryption_password)
+        actual_plaintext_hash = _sha256(decrypted_data)
+    except Exception:
+        # The download route remains responsible for reporting authentication
+        # and decryption failures without leaking integrity details.
+        return None
+
+    if actual_plaintext_hash != stored_file.sha256_hash:
+        _write_integrity_failure(
+            stored_file,
+            stored_file.sha256_hash,
+            actual_plaintext_hash,
+            "document",
+        )
+        flash("Document integrity verification failed. Download blocked.", "error")
+        return redirect(url_for("dashboard"))
+
     return None
 
 
-def _backfill_upload_hash(response):
-    if request.endpoint != "upload" or request.method != "POST" or response.status_code not in (302, 303):
+def _backfill_encrypted_storage_hash(response):
+    """Populate the storage-object hash for newly uploaded documents.
+
+    The document hash is calculated from plaintext in app.py and must never be
+    overwritten with a hash of encrypted storage bytes. This hook only fills
+    the separate encrypted_sha256_hash field for newly created records.
+    """
+    if request.endpoint not in ("upload", "create_document_version"):
+        return
+    if request.method != "POST" or response.status_code not in (302, 303):
         return
     if not getattr(current_user, "is_authenticated", False):
         return
+
     uploaded = request.files.get("file")
     filename = secure_filename(uploaded.filename) if uploaded else ""
-    case_id = request.form.get("case_id", type=int)
-    if not filename or not case_id:
+    if not filename:
         return
 
-    document = db.session.scalar(
-        db.select(CaseDocument)
-        .join(StoredFile, StoredFile.id == CaseDocument.stored_file_id)
-        .where(
-            CaseDocument.case_id == case_id,
-            StoredFile.user_id == current_user.id,
-            StoredFile.original_filename == filename,
+    if request.endpoint == "upload":
+        case_id = request.form.get("case_id", type=int)
+        if not case_id:
+            return
+        document = db.session.scalar(
+            db.select(CaseDocument)
+            .join(StoredFile, StoredFile.id == CaseDocument.stored_file_id)
+            .where(
+                CaseDocument.case_id == case_id,
+                StoredFile.user_id == current_user.id,
+                StoredFile.original_filename == filename,
+            )
+            .order_by(StoredFile.uploaded_at.desc())
         )
-        .order_by(StoredFile.uploaded_at.desc())
-    )
-    if document is None or document.stored_file.sha256_hash:
+    else:
+        document_id = request.view_args.get("document_id") if request.view_args else None
+        document = db.session.get(CaseDocument, document_id) if document_id else None
+
+    if document is None or document.stored_file.encrypted_sha256_hash:
         return
+
     try:
         encrypted_data = _storage_bytes(document.stored_file.encrypted_filename)
-        document.stored_file.sha256_hash = _sha256(encrypted_data)
+        document.stored_file.encrypted_sha256_hash = _sha256(encrypted_data)
         db.session.commit()
     except (FileNotFoundError, OSError, ValueError):
         db.session.rollback()
@@ -215,35 +269,6 @@ def _register_app_hooks(app):
     @app.after_request
     def phase3_audit_events(response):
         if not getattr(g, "phase3_blocked", False):
-            _backfill_upload_hash(response)
+            _backfill_encrypted_storage_hash(response)
             _record_request_event(response)
         return response
-
-    @app.route("/admin/audit-logs")
-    def audit_logs():
-        if not current_user.is_authenticated:
-            return redirect(url_for("login"))
-        from authz import is_admin
-        if not is_admin(current_user):
-            flash("Admin access is required.", "error")
-            return redirect(url_for("dashboard"))
-        logs = db.session.scalars(
-            db.select(AuditLog).order_by(AuditLog.created_at.desc()).limit(500)
-        ).all()
-        return render_template("admin_audit_logs.html", logs=logs)
-
-
-# app.py calls db.init_app(app) after importing models. Wrapping that call
-# gives us a fully initialized Flask app without introducing an import cycle.
-_original_init_app = db.init_app
-
-
-def _init_app_with_phase3(app, *args, **kwargs):
-    result = _original_init_app(app, *args, **kwargs)
-    if not app.extensions.get("phase3_hooks_registered"):
-        _register_app_hooks(app)
-        app.extensions["phase3_hooks_registered"] = True
-    return result
-
-
-db.init_app = _init_app_with_phase3
