@@ -4,6 +4,36 @@ All notable changes for the PS 26190 development track are recorded here.
 
 ## [Unreleased]
 
+### Phase 7 — OCR & Intelligent Document Search
+- Added local Tesseract OCR processing with no paid OCR API dependency.
+- Added OCR document persistence and Alembic migration `0010_ocr_documents`.
+- Added SHA-256 binding between OCR records and their source documents.
+- Preserved original encrypted documents while storing extracted OCR text separately.
+- Added authenticated document search and OCR detail routes.
+- Added filename, case, category, officer, date, and OCR-text search filters.
+- Enforced case-level and document-level authorization for Phase 7 search/OCR access.
+- Added negative authorization coverage for inaccessible documents.
+- Added Phase 7 CI validation across Python 3.10 and 3.12.
+
+### Phase 6 — Digital Signatures
+- Added Ed25519 signing and verification.
+- Added SHA-256 document hashing before signing.
+- Added encrypted per-user signing-key storage.
+- Added immutable signing identity fields and append-only signed records.
+- Added migration `0009_digital_signatures` and signing UI prototype.
+- Documented the distinction between technical signature verification and legally recognized digital signatures.
+
+### Phase 5 — Evidence Management & Chain of Custody
+- Added investigation evidence records and controlled evidence lifecycle.
+- Added custody transfers, receipts, ordered custody-chain retrieval, SHA-256 integrity verification, and append-only custody protections.
+- Added migration `0008_evidence_management` and automated coverage.
+
+### Phase 4 — Document Lifecycle & Versioning
+- Added document lifecycle controls, version records, chained document hashes, and lifecycle transitions.
+
+### Phase 3 — Audit Trail & Document Integrity
+- Added audit logging and document integrity metadata/hash tracking.
+
 ### Phase 2B — Role Management & Case Assignment
 - Added explicit case assignments for authorized stakeholders.
 - Added `0003_case_assignments` Alembic migration.
@@ -57,4 +87,4 @@ All notable changes for the PS 26190 development track are recorded here.
 - Confirmed the existing `.gitignore` excludes `.env`, virtual environments, caches, instance data, uploads, databases, and editor settings.
 
 ### Next
-- Phase 3: Audit Trail & Document Integrity.
+- Complete Phase 7 production migration and live verification, then tag `v0.8-ocr-search` and begin Phase 8.
