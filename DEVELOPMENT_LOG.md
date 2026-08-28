@@ -69,7 +69,7 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 
 ## Phase 7 — OCR & Intelligent Document Search
 
-**Status:** Implemented on `feature/phase7-ocr-document-search`; final merge and production deployment remain pending.
+**Status:** Merged into `main`; production migration and live production verification remain pending.
 
 ### PDP Scope
 - Preserve the original encrypted document.
@@ -87,8 +87,8 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 - Case-document relationship for OCR records.
 - Authenticated document-search UI and OCR detail route.
 - Filename, case, category, officer, date, and OCR-text search filters.
-- Case-level authorization filtering for search and OCR access.
-- Automated OCR service tests and Phase 7 route coverage.
+- Case-level and document-level authorization enforcement for search/OCR access.
+- Automated OCR service tests and Phase 7 route coverage, including negative authorization coverage.
 - CI workflow updated for Phase 7 test coverage and Python 3.10/3.12 validation.
 
 ### Phase 7 Verification Checklist
@@ -98,18 +98,24 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 - [x] OCR persistence model and migration.
 - [x] Search UI and authenticated routes.
 - [x] Case-level authorization checks.
+- [x] Document-level authorization checks.
 - [x] Automated OCR tests.
+- [x] Negative authorization testing.
 - [x] Phase 7 route tests.
 - [x] CI workflow configuration.
+- [x] Final Phase 7 CI run verified.
+- [x] Final security review.
+- [x] Pull request review and teammate approval.
+- [x] Merge into `main`.
 - [ ] PDF/scanned-document OCR support, if retained as a Phase 7 acceptance requirement.
-- [ ] Full CI run verified on the final Phase 7 commit.
-- [ ] Final security review.
-- [ ] Pull request review and approval.
-- [ ] Merge into the primary PS-26190 development line.
 - [ ] Apply migration `0010_ocr_documents` to production.
 - [ ] Production OCR/search verification.
 - [ ] Create/version `v0.8-ocr-search`.
 
+### Phase 7 Acceptance Note
+
+The implementation, CI, security review, teammate review, and merge gates are complete. Production migration and live production verification remain explicit deployment gates and are not marked complete without direct verification against the deployment database/application.
+
 ## Current Next Step
 
-Complete the remaining Phase 7 verification items, then create and review the Phase 7 pull request before merging into the primary PS-26190 development line. Migration `0010_ocr_documents` must not be applied to production until the Phase 7 code has been reviewed and the deployment target is ready.
+Complete production migration `0010_ocr_documents` and live OCR/search verification. Only after those deployment gates are verified should the `v0.8-ocr-search` release tag be created and Phase 8 development begin.
