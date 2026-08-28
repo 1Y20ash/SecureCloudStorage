@@ -232,7 +232,7 @@ def register_phase5_ui(app):
     """Register the Phase 5 UI blueprint on the main Flask application."""
     if "phase5_ui" not in app.blueprints:
         app.register_blueprint(phase5_ui)
-    # Phase 6 is registered here so the existing application bootstrap remains
-    # backward-compatible while the dedicated Phase 6 UI is introduced.
     from phase6_ui import register_phase6_ui
     register_phase6_ui(app)
+    from phase7_ui import register_phase7_ui
+    register_phase7_ui(app)
