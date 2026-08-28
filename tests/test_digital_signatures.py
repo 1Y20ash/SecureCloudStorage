@@ -6,7 +6,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from digital_signatures import calculate_document_hash, sign_document, verify_signature
-from models.digital_signature import DigitalSignature, _prevent_signature_delete, _prevent_signature_identity_change
+from models.digital_signature import (
+    DigitalSignature,
+    DigitalSigningKey,
+    _prevent_signature_delete,
+    _prevent_signature_identity_change,
+    _prevent_signing_key_change,
+    _prevent_signing_key_delete,
+)
 
 
 def _record_for(data=b"phase6 document"):
@@ -85,3 +92,18 @@ def test_signed_record_identity_is_immutable():
 def test_signed_record_delete_is_blocked():
     with pytest.raises(ValueError, match="append-only"):
         _prevent_signature_delete(None, None, SimpleNamespace())
+
+
+def test_signing_key_identity_is_immutable():
+    key = DigitalSigningKey()
+    key.user_id = 1
+    key.public_key = b"public"
+    key.encrypted_private_key = b"encrypted"
+    key.public_key = b"changed"
+    with pytest.raises(ValueError, match="Digital signing keys are immutable"):
+        _prevent_signing_key_change(None, None, key)
+
+
+def test_signing_key_delete_is_blocked():
+    with pytest.raises(ValueError, match="append-only"):
+        _prevent_signing_key_delete(None, None, SimpleNamespace())
