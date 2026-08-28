@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Signature #{{ signature.id }} — SecureCloudStorage{% endblock %}
+{% block content %}
+<section class="py-4 py-lg-5">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">Phase 6 • Signed Record</span>
+      <h1 class="display-6 fw-semibold mt-3 mb-2">Signature #{{ signature.id }}</h1>
+      <p class="text-secondary mb-0">Ed25519 technical signature record.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('phase6_ui.signature_list') }}">Back</a>
+  </div>
+
+  <div class="alert alert-warning rounded-4 border-0 shadow-sm">
+    <strong>Legal-status boundary:</strong> a valid result below means the supplied document matches the stored SHA-256 digest and Ed25519 signature. It does not mean the signature is legally recognized or statutory.
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 fw-semibold mb-4">Signed record</h2>
+          <dl class="row mb-0">
+            <dt class="col-sm-4 text-secondary">Signer</dt><dd class="col-sm-8">{{ signature.signer_name }}</dd>
+            <dt class="col-sm-4 text-secondary">Timestamp</dt><dd class="col-sm-8">{{ signature.signed_at }}</dd>
+            <dt class="col-sm-4 text-secondary">Algorithm</dt><dd class="col-sm-8">Ed25519</dd>
+            <dt class="col-sm-4 text-secondary">Status</dt><dd class="col-sm-8"><span class="badge rounded-pill text-bg-secondary">{{ signature.verification_status }}</span></dd>
+          </dl>
+          <hr>
+          <div class="small text-secondary">SHA-256 document hash</div>
+          <code class="d-block bg-light p-3 rounded-3 mt-2 text-break">{{ signature.document_hash }}</code>
+          <div class="small text-secondary mt-3">Base64 signature</div>
+          <code class="d-block bg-light p-3 rounded-3 mt-2 text-break small">{{ payload.signature }}</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <h2 class="h5 fw-semibold">Verify Signature</h2>
+          <p class="text-secondary small">Upload the document bytes that were originally signed.</p>
+          <form method="post" enctype="multipart/form-data" action="{{ url_for('phase6_ui.signature_verify', signature_id=signature.id) }}">
+            <input class="form-control mb-3" type="file" name="document" required>
+            <button class="btn btn-primary w-100 rounded-3" type="submit">Verify Signature</button>
+          </form>
+          <div class="small text-secondary mt-3">Verification checks both the SHA-256 digest and the Ed25519 signature.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
