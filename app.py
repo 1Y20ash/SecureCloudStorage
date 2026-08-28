@@ -677,5 +677,9 @@ def logout():
     return redirect(url_for("home"))
 
 
+from phase5_ui import register_phase5_ui
+register_phase5_ui(app)
+
+
 if __name__ == "__main__":
     app.run(debug=True)
