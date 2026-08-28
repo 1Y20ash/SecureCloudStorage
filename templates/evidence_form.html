@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Register Evidence — SecureVault{% endblock %}
+{% block content %}
+<section class="py-4 py-lg-5">
+  <div class="mb-4">
+    <a class="small text-secondary text-decoration-none" href="{{ url_for('phase5_ui.evidence_list') }}">← Evidence Vault</a>
+    <h1 class="display-6 fw-semibold mt-3 mb-2">Register evidence</h1>
+    <p class="text-secondary mb-0">Create an immutable evidence identity and capture its first COLLECTED custody event.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Case</label>
+              <select class="form-select" name="case_id" required>
+                <option value="">Select case</option>
+                {% for case in cases %}<option value="{{ case.id }}">{{ case.case_number }} — {{ case.title }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Evidence type</label>
+              <input class="form-control" name="evidence_type" required placeholder="e.g. Mobile phone, document, image">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea class="form-control" name="description" rows="3" placeholder="Describe the item and relevant identifying details"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Collection location</label>
+              <input class="form-control" name="collection_location" placeholder="Location where evidence was collected">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Collection date & time</label>
+              <input class="form-control" type="datetime-local" name="collection_datetime">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex align-items-center gap-2 mb-2"><span class="badge rounded-pill text-bg-success">Integrity</span><h2 class="h5 mb-0">Lock the SHA-256 value</h2></div>
+          <p class="small text-secondary">The SHA-256 value is immutable after creation. Use an existing vault file, upload plaintext evidence bytes for hashing, or enter a known 64-character SHA-256 value.</p>
+          <label class="form-label fw-semibold">Existing vault file</label>
+          <select class="form-select mb-3" name="stored_file_id">
+            <option value="">No linked vault file</option>
+            {% for file in files %}<option value="{{ file.id }}">{{ file.original_filename }}{% if file.sha256_hash %} — {{ file.sha256_hash[:12] }}…{% endif %}</option>{% endfor %}
+          </select>
+          <label class="form-label fw-semibold">Or upload plaintext bytes for hashing</label>
+          <input class="form-control mb-3" type="file" name="integrity_file">
+          <label class="form-label fw-semibold">Or enter SHA-256 manually</label>
+          <input class="form-control font-monospace" name="sha256_hash" minlength="64" maxlength="64" pattern="[0-9a-fA-F]{64}" placeholder="64 hexadecimal characters">
+          <div class="alert alert-warning border-0 mt-3 mb-0 small">The hash and public evidence identifier cannot be edited later. Corrections must be represented by new evidence/custody events.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 sticky-lg-top" style="top:90px;">
+        <div class="card-body p-4">
+          <h2 class="h5 fw-semibold">What happens next?</h2>
+          <ol class="small text-secondary ps-3 mb-4">
+            <li class="mb-2">A unique <strong>EVD-…</strong> identifier is generated.</li>
+            <li class="mb-2">The evidence starts at <strong>Collected</strong>.</li>
+            <li class="mb-2">A <strong>COLLECTED</strong> custody event is appended.</li>
+            <li class="mb-2">The SHA-256 value is permanently recorded.</li>
+          </ol>
+          <button class="btn btn-success w-100 rounded-3 py-2" type="submit">Register evidence securely</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}
