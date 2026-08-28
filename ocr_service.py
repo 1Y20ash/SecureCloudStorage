@@ -7,7 +7,7 @@ provider. OCR output is derived data and never replaces the original document.
 import hashlib
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404 - Tesseract is a fixed local executable; no shell is used.
 import tempfile
 
 
@@ -55,7 +55,7 @@ def extract_text(document_bytes: bytes, filename: str, language: str = "eng") ->
         output_base = os.path.join(temp_dir, "ocr")
         with open(source_path, "wb") as source_file:
             source_file.write(document_bytes)
-        completed = subprocess.run(
+        completed = subprocess.run(  # nosec B603 - executable is resolved locally and arguments are not shell-interpreted.
             [executable, source_path, output_base, "-l", language],
             capture_output=True,
             text=True,
