@@ -28,73 +28,29 @@ Implemented document lifecycle controls, version records, chained document hashe
 
 ## Phase 5 — Evidence Management & Chain of Custody
 
-**Status:** Completed on `feature/phase5-evidence-chain-of-custody`.
+**Status:** Completed.
 
-### Implemented Scope
-- Investigation evidence model with unique `EVD-*` identifier.
-- Case association, evidence type, description, collector, current holder, collection metadata, lifecycle status, SHA-256 integrity value, and optional encrypted stored-file linkage.
-- Controlled lifecycle: `Collected → Uploaded → Transferred → Examined → Stored → Presented`.
-- One-step lifecycle transition enforcement.
-- Initial `COLLECTED` custody event.
-- Current-holder-only custody transfer after upload.
-- Case-access validation for actors and recipients.
-- Explicit recipient `RECEIVED` custody event and audit record.
-- Ordered custody-chain retrieval.
-- SHA-256 format validation and constant-time integrity verification.
-- Integrity pass/fail audit records.
-- Immutable evidence identifier and SHA-256 integrity value at the SQLAlchemy model layer.
-- Application-level append-only protection for custody history.
-- Alembic migration `0008_evidence_management` linking evidence to the existing custody system.
-- Explicit model registration during application startup.
-- Automated Phase 5 test coverage and CI workflow coverage.
-- Phase 5 implementation documentation.
-
-### Phase 5 Completion Criteria
-- [x] Evidence model and database migration.
-- [x] Evidence lifecycle and transition enforcement.
-- [x] Initial acquisition custody event.
-- [x] Current-holder custody transfer authorization.
-- [x] Explicit recipient receipt.
-- [x] Custody-chain retrieval.
-- [x] SHA-256 validation and integrity verification.
-- [x] Integrity audit records.
-- [x] Immutable evidence identity and integrity hash.
-- [x] Append-only custody event protection.
-- [x] Automated tests.
-- [x] CI workflow coverage.
-- [x] Documentation.
-- [x] Version-controlled Phase 5 branch.
-
-### Phase 5 Verification Baseline
-- Local test suite: 50 tests passed after Phase 5 UI integration on `main`.
-- Final Phase 5 changes add dedicated tests for custody-event immutability and evidence identity/hash immutability.
-- Development and demonstration data remains synthetic only.
+Implemented investigation evidence records, controlled evidence lifecycle, custody transfers and receipts, ordered custody-chain retrieval, SHA-256 integrity verification, append-only custody protections, migration `0008_evidence_management`, automated tests, CI coverage, and implementation documentation.
 
 ## Phase 6 — Digital Signatures
 
-**Status:** In progress on `feature/phase6-digital-signatures`.
+**Status:** Completed and production-verified.
 
-### PDP Scope
-- Provide a mechanism for verifying authenticity and integrity of important documents.
-- Prefer free/open-source cryptographic implementations.
-- Workflow: Document → Hash → Digital Signature → Signed Record.
-- Signed record stores signer, timestamp, document hash, signature, and verification status.
-- Provide `Verify Signature`.
-- Explicitly distinguish technical signature verification from legally recognized digital signatures.
-- Deliverable: Digital signature and verification prototype.
-- Target version: `v0.7-digital-signatures`.
-
-### Implemented Phase 6 Foundation
+### Implemented Scope
 - Ed25519 signing and verification through the existing `cryptography` dependency.
 - SHA-256 document hashing before signing.
 - Per-user signing-key records with encrypted private-key storage.
-- Immutable cryptographic identity fields for signed records.
-- Append-only signed-record protection.
+- Immutable cryptographic identity fields and append-only signed records.
 - Alembic migration `0009_digital_signatures`.
 - Signing, signed-record listing, detail, and verification UI.
 - Explicit prototype/legal-status boundary in the UI and documentation.
 - Automated cryptographic and UI-route tests.
-- CI workflow coverage for `feature/phase6-digital-signatures`.
+
+### Production Verification
+- Supabase PostgreSQL production schema was reconciled with the migration history by stamping the existing baseline as `0001_initial_schema`.
+- Production migrations `0002` through `0009` were applied successfully.
+- Production Alembic revision verified as `0009_digital_signatures`.
+- Deployed application login was retested successfully after the production schema repair.
 
 ### Phase 6 Completion Criteria
 - [x] Cryptographic signing service.
@@ -107,13 +63,53 @@ Implemented document lifecycle controls, version records, chained document hashe
 - [x] Digital-signature UI prototype.
 - [x] Technical-vs-legal distinction documented and displayed.
 - [x] Automated tests.
-- [x] CI workflow coverage configured.
-- [ ] Final local test and migration verification.
-- [ ] CI run fully green.
-- [ ] Security/review checkpoint.
-- [ ] Merge to `main`.
-- [ ] Create `v0.7-digital-signatures` tag.
+- [x] Migration verification.
+- [x] Production login verification.
+- [x] Security/review checkpoint for the production schema repair.
+
+## Phase 7 — OCR & Intelligent Document Search
+
+**Status:** Implemented on `feature/phase7-ocr-document-search`; final merge and production deployment remain pending.
+
+### PDP Scope
+- Preserve the original encrypted document.
+- Extract text locally using free/open-source OCR tooling.
+- Persist OCR text without replacing the original document.
+- Bind OCR output to the source document through SHA-256.
+- Search by filename, case, category, officer, date, metadata, and extracted OCR text.
+- Enforce authentication and case-level authorization.
+- Prefer privacy-conscious local processing; no paid OCR API dependency.
+
+### Implemented Phase 7 Scope
+- Local Tesseract OCR service.
+- OCR document model and migration `0010_ocr_documents`.
+- Source-document SHA-256 binding for OCR records.
+- Case-document relationship for OCR records.
+- Authenticated document-search UI and OCR detail route.
+- Filename, case, category, officer, date, and OCR-text search filters.
+- Case-level authorization filtering for search and OCR access.
+- Automated OCR service tests and Phase 7 route coverage.
+- CI workflow updated for Phase 7 test coverage and Python 3.10/3.12 validation.
+
+### Phase 7 Verification Checklist
+- [x] Local/open-source OCR foundation.
+- [x] Original document preservation.
+- [x] Source SHA-256 binding.
+- [x] OCR persistence model and migration.
+- [x] Search UI and authenticated routes.
+- [x] Case-level authorization checks.
+- [x] Automated OCR tests.
+- [x] Phase 7 route tests.
+- [x] CI workflow configuration.
+- [ ] PDF/scanned-document OCR support, if retained as a Phase 7 acceptance requirement.
+- [ ] Full CI run verified on the final Phase 7 commit.
+- [ ] Final security review.
+- [ ] Pull request review and approval.
+- [ ] Merge into the primary PS-26190 development line.
+- [ ] Apply migration `0010_ocr_documents` to production.
+- [ ] Production OCR/search verification.
+- [ ] Create/version `v0.8-ocr-search`.
 
 ## Current Next Step
 
-Phase 6 implementation is in progress. The version tag must remain unmoved until the complete Phase 6 verification checklist is green.
+Complete the remaining Phase 7 verification items, then create and review the Phase 7 pull request before merging into the primary PS-26190 development line. Migration `0010_ocr_documents` must not be applied to production until the Phase 7 code has been reviewed and the deployment target is ready.
