@@ -47,6 +47,7 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+      # Phase 7 verification trigger; results must be green before merge.
       - name: Upload pytest report on failure
         if: failure()
         uses: actions/upload-artifact@v4
