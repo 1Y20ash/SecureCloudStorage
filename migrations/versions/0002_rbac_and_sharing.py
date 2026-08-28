@@ -35,19 +35,18 @@ def upgrade():
         sa.ForeignKeyConstraint(["case_document_id"], ["case_documents.id"]),
         sa.ForeignKeyConstraint(["shared_with_user_id"], ["user.id"]),
         sa.ForeignKeyConstraint(["shared_by_user_id"], ["user.id"]),
+        sa.UniqueConstraint(
+            "case_document_id",
+            "shared_with_user_id",
+            name="uq_document_share_recipient",
+        ),
     )
     op.create_index("ix_document_shares_case_document_id", "document_shares", ["case_document_id"])
     op.create_index("ix_document_shares_shared_with_user_id", "document_shares", ["shared_with_user_id"])
     op.create_index("ix_document_shares_shared_by_user_id", "document_shares", ["shared_by_user_id"])
-    op.create_unique_constraint(
-        "uq_document_share_recipient",
-        "document_shares",
-        ["case_document_id", "shared_with_user_id"],
-    )
 
 
 def downgrade():
-    op.drop_constraint("uq_document_share_recipient", "document_shares", type_="unique")
     op.drop_index("ix_document_shares_shared_by_user_id", table_name="document_shares")
     op.drop_index("ix_document_shares_shared_with_user_id", table_name="document_shares")
     op.drop_index("ix_document_shares_case_document_id", table_name="document_shares")
