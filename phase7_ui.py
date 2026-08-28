@@ -167,6 +167,8 @@ def _read_encrypted_file(filename):
 
 
 def register_phase7_ui(app):
-    """Register the Phase 7 OCR/search blueprint."""
+    """Register the Phase 7 OCR/search blueprint and Phase 8 security layer."""
     if "phase7_ui" not in app.blueprints:
         app.register_blueprint(phase7_ui)
+    from security_monitoring import register_security_monitoring
+    register_security_monitoring(app)
