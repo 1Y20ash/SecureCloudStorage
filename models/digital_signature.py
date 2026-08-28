@@ -47,6 +47,21 @@ class DigitalSignature(db.Model):
     signer = db.relationship("User", foreign_keys=[signer_id])
 
 
+@event.listens_for(DigitalSigningKey, "before_update")
+def _prevent_signing_key_change(mapper, connection, target):
+    """Signing key material is fixed for the life of the key record."""
+    history = inspect(target)
+    for field in ("user_id", "public_key", "encrypted_private_key", "created_at"):
+        if history.attrs[field].history.has_changes():
+            raise ValueError("Digital signing keys are immutable")
+
+
+@event.listens_for(DigitalSigningKey, "before_delete")
+def _prevent_signing_key_delete(mapper, connection, target):
+    """Do not silently destroy the key that authenticates existing signatures."""
+    raise ValueError("Digital signing keys are append-only")
+
+
 @event.listens_for(DigitalSignature, "before_update")
 def _prevent_signature_identity_change(mapper, connection, target):
     """A signed record's cryptographic identity cannot be rewritten."""
