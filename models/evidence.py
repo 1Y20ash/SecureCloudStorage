@@ -66,7 +66,9 @@ class Evidence(db.Model):
 def _prevent_evidence_identity_change(mapper, connection, target):
     """Evidence identity and its recorded integrity hash cannot be rewritten."""
     history = inspect(target)
+
     if history.attrs.evidence_id.history.has_changes():
         raise ValueError("Evidence identifiers are immutable")
+
     if history.attrs.sha256_hash.history.has_changes():
-        raise ValueError("Evidence SHA-256 hashes are immutable")
+        raise ValueError("SHA-256 hashes are immutable")
