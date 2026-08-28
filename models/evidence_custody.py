@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from extensions import db
 from models.evidence import Evidence
+from sqlalchemy import event
 
 
 class EvidenceCustody(db.Model):
@@ -32,3 +33,15 @@ class EvidenceCustody(db.Model):
     actor = db.relationship("User", foreign_keys=[actor_user_id])
     from_user = db.relationship("User", foreign_keys=[from_user_id])
     to_user = db.relationship("User", foreign_keys=[to_user_id])
+
+
+@event.listens_for(EvidenceCustody, "before_update")
+def _prevent_custody_event_update(mapper, connection, target):
+    """Custody history is immutable once written; corrections require a new event."""
+    raise ValueError("Evidence custody events are append-only and cannot be updated")
+
+
+@event.listens_for(EvidenceCustody, "before_delete")
+def _prevent_custody_event_delete(mapper, connection, target):
+    """Prevent application-level deletion of custody history."""
+    raise ValueError("Evidence custody events are append-only and cannot be deleted")
