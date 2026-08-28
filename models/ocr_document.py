@@ -8,7 +8,7 @@ source document that produced it.
 from datetime import datetime, timezone
 
 from sqlalchemy import ForeignKey, Index, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from extensions import db
 
@@ -32,8 +32,6 @@ class OCRDocument(db.Model):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
-
-    case_document = relationship("CaseDocument", back_populates="ocr_document")
 
     __table_args__ = (
         Index("ix_ocr_documents_source_sha256", "source_sha256"),
