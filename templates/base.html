@@ -39,7 +39,15 @@
         </div>
     </nav>
     <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-container">{% for category, message in messages %}<div class="flash {{ category }} alert {% if category == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center gap-2" role="alert"><span>{% if category == 'success' %}✓{% else %}⚠️{% endif %}</span><span>{{ message }}</span></div>{% endfor %}</div>{% endwith %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }} alert {% if category == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center gap-2" role="alert"><span>{% if category == 'success' %}✓{% else %}⚠️{% endif %}</span><span>{{ message }}</span></div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
     <div class="modal fade" id="installAppModal" tabindex="-1" aria-labelledby="installAppTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered px-3"><div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden"><div class="modal-body p-4 p-md-5 text-center"><div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-4 bg-success-subtle" style="width:72px;height:72px;font-size:32px;">🔐</div><h2 class="h4 fw-semibold mb-2" id="installAppTitle">Install SecureVault</h2><p class="text-secondary mb-4">Install SecureVault as an app for faster access to your private cloud vault.</p><button type="button" class="btn btn-success btn-lg w-100 rounded-3 mb-2" id="installAppButton">Install app</button><button type="button" class="btn btn-link text-secondary text-decoration-none" data-bs-dismiss="modal">Not now</button></div></div></div></div>
