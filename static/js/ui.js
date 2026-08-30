@@ -105,7 +105,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 8. Install SecureVault popup — home page only, once per browser session.
+
+  // 8. Secure Decrypt & Download flow
+  const decryptDownloadModalElement = document.getElementById("decryptDownloadModal");
+  const decryptDownloadForm = document.getElementById("decryptDownloadForm");
+  const decryptDownloadPassword = document.getElementById("decryptDownloadPassword");
+  const decryptDownloadDocumentName = document.getElementById("decryptDownloadDocumentName");
+  const toggleDecryptPassword = document.getElementById("toggleDecryptPassword");
+
+  document.querySelectorAll(".decrypt-download-trigger").forEach((trigger) => {
+    trigger.addEventListener("click", (event) => {
+      if (!decryptDownloadModalElement || !decryptDownloadForm || typeof bootstrap === "undefined") return;
+      event.preventDefault();
+
+      decryptDownloadForm.action = trigger.dataset.downloadUrl || trigger.href;
+      decryptDownloadForm.reset();
+
+      if (decryptDownloadDocumentName) {
+        decryptDownloadDocumentName.textContent = trigger.dataset.documentName || "Selected document";
+      }
+
+      const modal = bootstrap.Modal.getOrCreateInstance(decryptDownloadModalElement);
+      modal.show();
+      decryptDownloadModalElement.addEventListener("shown.bs.modal", () => decryptDownloadPassword?.focus(), { once: true });
+    });
+  });
+
+  if (toggleDecryptPassword && decryptDownloadPassword) {
+    toggleDecryptPassword.addEventListener("click", () => {
+      const visible = decryptDownloadPassword.type === "text";
+      decryptDownloadPassword.type = visible ? "password" : "text";
+      toggleDecryptPassword.textContent = visible ? "Show" : "Hide";
+      toggleDecryptPassword.setAttribute("aria-label", visible ? "Show password" : "Hide password");
+    });
+  }
+
+  // 9. Install SecureVault popup — home page only, once per browser session.
   // Only show the popup when the browser has provided a native install prompt.
   let deferredInstallPrompt = null;
   const installModalElement = document.getElementById("installAppModal");

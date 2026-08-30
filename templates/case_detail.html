@@ -136,8 +136,10 @@
 
               <div class="d-flex justify-content-end gap-2">
 
-                <a class="btn btn-sm btn-outline-success"
-                   href="{{ url_for('download', file_id=document.stored_file.id) }}">
+                <a class="btn btn-sm btn-outline-success decrypt-download-trigger"
+                   href="{{ url_for('download', file_id=document.stored_file.id) }}"
+                   data-download-url="{{ url_for('download', file_id=document.stored_file.id) }}"
+                   data-document-name="{{ document.stored_file.original_filename }}">
                   Download →
                 </a>
 
