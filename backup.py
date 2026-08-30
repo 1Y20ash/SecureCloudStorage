@@ -1,13 +1,4 @@
-"""Encrypted backup and restore utilities for PS-26190 Phase 9.
-
-Backups contain the application database plus the locally stored encrypted
-file objects and a SHA-256 manifest. The backup container itself is encrypted
-with AES-256-GCM. The backup key is supplied separately through
-BACKUP_ENCRYPTION_KEY and is never written into the repository or archive.
-
-SQLite is supported natively. PostgreSQL uses pg_dump/pg_restore when those
-open-source client utilities are available on the host.
-"""
+"""Encrypted backup and restore utilities for PS-26190 Phase 9."""
 
 from __future__ import annotations
 
@@ -65,7 +56,12 @@ def _safe_extract(tar: tarfile.TarFile, destination: Path) -> None:
         if target != root and root not in target.parents:
             raise ValueError(f"Unsafe archive path: {member.name}")
     destination.mkdir(parents=True, exist_ok=True)
-    tar.extractall(destination, filter="data")
+    # The explicit validation above is compatible with Python 3.10/3.11;
+    # Python 3.12+ additionally supports the safer data filter.
+    try:
+        tar.extractall(destination, filter="data")
+    except TypeError:
+        tar.extractall(destination)
 
 
 def _sqlite_backup(source: Path, destination: Path) -> None:
@@ -103,7 +99,11 @@ def _postgres_restore(database_url: str, dump_path: Path) -> None:
 
 
 def _database_scheme(database_url: str) -> str:
-    return "postgresql" if database_url.startswith(("postgresql://", "postgresql+psycopg2://")) else "sqlite"
+    if database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
+        return "postgresql"
+    if database_url.startswith("sqlite:///"):
+        return "sqlite"
+    raise ValueError("Unsupported database URL; only SQLite and PostgreSQL are supported.")
 
 
 def _sqlite_path(database_url: str, app_root: Path | None = None) -> Path:
@@ -185,6 +185,8 @@ def create_backup(output_path: str | Path, database_url: str, encrypted_files_di
 def restore_backup(backup_path: str | Path, database_url: str, encrypted_files_dir: str | Path | None = None, key: str | None = None, restore_files: bool = True) -> dict:
     """Verify and restore an authenticated encrypted backup."""
     source = Path(backup_path).resolve()
+    if not source.is_file():
+        raise FileNotFoundError(f"Backup not found: {source}")
     raw = source.read_bytes()
     if not raw.startswith(MAGIC) or len(raw) <= len(MAGIC) + NONCE_SIZE:
         raise ValueError("Invalid SecureCloudStorage backup container.")
@@ -200,16 +202,28 @@ def restore_backup(backup_path: str | Path, database_url: str, encrypted_files_d
         with tarfile.open(tar_path, "r:gz") as tar:
             _safe_extract(tar, payload)
 
-        manifest = json.loads((payload / "manifest.json").read_text(encoding="utf-8"))
+        manifest_path = payload / "manifest.json"
+        if not manifest_path.is_file():
+            raise ValueError("Backup manifest is missing.")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         if manifest.get("format") != 1:
             raise ValueError("Unsupported backup format.")
+        if manifest.get("database_type") not in {"sqlite", "postgresql"}:
+            raise ValueError("Unsupported backup database type.")
+        if not isinstance(manifest.get("files", []), list):
+            raise ValueError("Invalid backup file manifest.")
+        if not isinstance(manifest.get("database_file"), str) or not isinstance(manifest.get("database_sha256"), str):
+            raise ValueError("Invalid backup database manifest.")
+
         db_file = (payload / manifest["database_file"]).resolve()
-        if payload.resolve() not in db_file.parents:
-            raise ValueError("Unsafe database path in backup manifest.")
+        if payload.resolve() not in db_file.parents or not db_file.is_file():
+            raise ValueError("Unsafe or missing database path in backup manifest.")
         if _sha256(db_file) != manifest["database_sha256"]:
             raise ValueError("Backup database integrity verification failed.")
 
         for item in manifest.get("files", []):
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str) or not isinstance(item.get("sha256"), str):
+                raise ValueError("Invalid backup file manifest entry.")
             file_path = (payload / item["path"]).resolve()
             if payload.resolve() not in file_path.parents or not file_path.is_file():
                 raise ValueError(f"Invalid backup file path: {item['path']}")
