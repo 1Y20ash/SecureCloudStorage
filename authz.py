@@ -53,9 +53,6 @@ def share_is_active(share):
         return True
 
     expires_at = share.expires_at
-    # SQLite may return DateTime(timezone=True) values without tzinfo.
-    # Treat such persisted values as UTC so they can be compared safely with
-    # the application's timezone-aware UTC clock.
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
@@ -92,6 +89,16 @@ def can_access_case(user, case):
 def role_can_access_category(user, category):
     allowed_categories = ROLE_DOCUMENT_CATEGORIES.get(user.role)
     return allowed_categories is None or category in allowed_categories
+
+
+def can_upload_document(user, case, category):
+    if not user.is_authenticated or case is None:
+        return False
+    if not has_permission(user, "upload"):
+        return False
+    if not can_access_case(user, case):
+        return False
+    return role_can_access_category(user, category)
 
 
 def can_access_document(user, case_document):
