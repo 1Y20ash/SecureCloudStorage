@@ -19,9 +19,6 @@ class Config:
         "1", "true", "yes", "on"
     }
 
-    # Flask session cookies: secure in production, HTTP-only everywhere, and
-    # SameSite=Lax to reduce cross-site request abuse while retaining normal
-    # navigation/login behavior.
     SESSION_COOKIE_SECURE = _production
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -29,8 +26,9 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
 
-    # Reject oversized request bodies before application code processes them.
-    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    # Leave room for multipart/form-data headers while enforcing the 10 MB
+    # application-level file limit in app.py.
+    MAX_CONTENT_LENGTH = 12 * 1024 * 1024
 
     if SQLALCHEMY_DATABASE_URI.startswith(("postgresql://", "postgresql+psycopg2://")):
         SQLALCHEMY_ENGINE_OPTIONS = {
