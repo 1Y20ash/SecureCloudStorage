@@ -1,0 +1,6 @@
+/* Dashboard layout normalization */
+/* Keep the site at the browser's native scale; global zoom caused the dashboard to overflow and appear compressed. */
+html { zoom: 1; }
+@media (max-width: 768px) {
+  html { zoom: 1; }
+}
