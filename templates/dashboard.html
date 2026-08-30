@@ -25,11 +25,20 @@
     </div></div>
   </div>
 
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white border-0 p-4"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">Case Assignment</h2><p class="text-secondary mb-0">Assign authorized investigators and specialists to the cases they handle.</p></div><span class="badge rounded-pill text-bg-light border px-3 py-2">Access controlled</span></div></div>
+    {% if cases %}
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case</th><th>Current owner</th><th>Status</th><th class="text-end pe-4">Assignment</th></tr></thead><tbody>
+      {% for case in cases %}<tr><td class="ps-4"><div class="fw-semibold">{{ case.case_number }}</div><div class="small text-secondary">{{ case.title }}</div></td><td>{{ case.owner.name if case.owner else '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('manage_case_assignments', case_id=case.id) }}">Manage assignments →</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">Create a case first to assign investigation roles.</p></div>{% endif %}
+  </div>
+
   <div class="row g-4 mb-4">
     <div class="col-xl-8">
       <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
         <div class="card-header bg-white border-0 p-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">My Cases</h2><p class="text-secondary mb-0">Cases you own or administer.</p></div><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">Create Case</a></div></div>
-        {% if cases %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case ID</th><th>Title</th><th>Department</th><th>Status</th><th>Documents</th><th class="text-end pe-4">Action</th></tr></thead><tbody>{% for case in cases %}<tr><td class="ps-4 fw-semibold">{{ case.case_number }}</td><td>{{ case.title }}</td><td>{{ case.department or '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td>{{ case.documents|length }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('case_detail', case_id=case.id) }}">Open Case →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No cases yet</h3><p class="text-secondary">Create your first case to start organizing protected documents.</p><a class="btn btn-success rounded-3" href="{{ url_for('create_case') }}">Create your first case</a></div>{% endif %}
+        {% if cases %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case ID</th><th>Title</th><th>Department</th><th>Status</th><th>Documents</th><th class="text-end pe-4">Action</th></tr></thead><tbody>{% for case in cases %}<tr><td class="ps-4 fw-semibold">{{ case.case_number }}</td><td>{{ case.title }}</td><td>{{ case.department or '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td>{{ case.documents|length }}</td><td class="text-end pe-4"><div class="d-flex justify-content-end gap-2"><a class="btn btn-sm btn-outline-success" href="{{ url_for('manage_case_assignments', case_id=case.id) }}">Assign</a><a class="btn btn-sm btn-outline-success" href="{{ url_for('case_detail', case_id=case.id) }}">Open Case →</a></div></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No cases yet</h3><p class="text-secondary">Create your first case to start organizing protected documents.</p><a class="btn btn-success rounded-3" href="{{ url_for('create_case') }}">Create your first case</a></div>{% endif %}
       </div>
     </div>
     <div class="col-xl-4">
