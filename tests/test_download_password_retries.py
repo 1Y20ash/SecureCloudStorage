@@ -43,7 +43,10 @@ def test_repeated_wrong_passwords_never_return_plaintext(monkeypatch):
             )
         )
         db.session.commit()
+        # The Phase 3 integrity guard reads storage independently of the
+        # download route, so mock both storage readers for this unit test.
         monkeypatch.setattr("app.read_encrypted_file", lambda filename: encrypted)
+        monkeypatch.setattr("audit_hooks._storage_bytes", lambda filename: encrypted)
         with client.session_transaction() as session:
             session["_user_id"] = str(user.id)
             session["_fresh"] = True
@@ -56,9 +59,6 @@ def test_repeated_wrong_passwords_never_return_plaintext(monkeypatch):
             assert response.status_code == 302
             assert response.data != plaintext
             assert "attachment" not in response.headers.get("Content-Disposition", "").lower()
-            # The password failure may redirect to the dashboard or another
-            # safe application page depending on the current UI flow. The
-            # security contract is that no attachment/plaintext is returned.
             assert response.headers.get("Location", "").startswith("/")
 
         response = client.post(
