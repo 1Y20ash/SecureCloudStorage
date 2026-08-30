@@ -1,22 +1,48 @@
 {% extends "base.html" %}
-{% block title %}DMS Dashboard — SecureVault{% endblock %}
+{% block title %}Investigation Dashboard — SecureVault{% endblock %}
 {% block content %}
 <div class="dashboard-page container-fluid px-0 py-4">
   <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-    <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · DMS</span><h1 id="dynamic-greeting" class="display-5 fw-semibold mb-2" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1><p class="lead text-secondary mb-0">Your secure workspace for cases, legal documents, evidence, and investigation records.</p></div>
+    <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · INVESTIGATION WORKSPACE</span><h1 id="dynamic-greeting" class="display-5 fw-semibold mb-2" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1><p class="lead text-secondary mb-0">Your secure workspace for cases, legal documents, evidence, and investigation records.</p></div>
     <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">+ New Case</a><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add Document ↑</a><a class="btn btn-outline-success rounded-3" href="{{ url_for('phase7_ui.document_search') }}">Search Documents 🔎</a></div>
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ cases|length }}</div><div class="small text-secondary">Cases</div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ files|length }}</div><div class="small text-secondary">Documents</div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">{{ shared_documents|length }}</div><div class="small text-secondary">Shared with me</div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="fs-3 fw-semibold">AES-256</div><div class="small text-secondary">Protection</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-uppercase text-secondary fw-semibold mb-1">Active workspace</div><div class="fs-3 fw-semibold">{{ cases|length }}</div><div class="small text-secondary">Cases</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-uppercase text-secondary fw-semibold mb-1">Protected records</div><div class="fs-3 fw-semibold">{{ files|length }}</div><div class="small text-secondary">Documents</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-uppercase text-secondary fw-semibold mb-1">Collaboration</div><div class="fs-3 fw-semibold">{{ shared_documents|length }}</div><div class="small text-secondary">Shared with me</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-uppercase text-secondary fw-semibold mb-1">Protection</div><div class="fs-3 fw-semibold">AES-256</div><div class="small text-secondary">Authenticated encryption</div></div></div></div>
   </div>
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="card-header bg-white border-0 p-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">My Cases</h2><p class="text-secondary mb-0">Cases you own or administer.</p></div><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">Create Case</a></div></div>
-    {% if cases %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case ID</th><th>Title</th><th>Department</th><th>Status</th><th>Documents</th><th class="text-end pe-4">Action</th></tr></thead><tbody>{% for case in cases %}<tr><td class="ps-4 fw-semibold">{{ case.case_number }}</td><td>{{ case.title }}</td><td>{{ case.department or '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td>{{ case.documents|length }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('case_detail', case_id=case.id) }}">Open Case →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No cases yet</h3><p class="text-secondary">Create your first case to start organizing protected documents.</p><a class="btn btn-success rounded-3" href="{{ url_for('create_case') }}">Create your first case</a></div>{% endif %}
+    <div class="card-header bg-white border-0 p-4"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">Investigation Workflow</h2><p class="text-secondary mb-0">Manage the complete protected record lifecycle from case creation to verified retrieval.</p></div><span class="badge rounded-pill text-bg-success px-3 py-2">Secure by design</span></div></div>
+    <div class="card-body p-4 pt-2"><div class="row g-3">
+      <div class="col-6 col-md-3 col-xl"><div class="p-3 rounded-4 bg-light border h-100"><div class="fw-semibold mb-1">01 · Case</div><div class="small text-secondary">Create and organize the investigation workspace.</div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="p-3 rounded-4 bg-light border h-100"><div class="fw-semibold mb-1">02 · Protect</div><div class="small text-secondary">Encrypt and preserve case documents.</div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="p-3 rounded-4 bg-light border h-100"><div class="fw-semibold mb-1">03 · Control</div><div class="small text-secondary">Apply role and case-level authorization.</div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="p-3 rounded-4 bg-light border h-100"><div class="fw-semibold mb-1">04 · Trace</div><div class="small text-secondary">Track evidence, versions, and audit events.</div></div></div>
+      <div class="col-12 col-xl"><div class="p-3 rounded-4 bg-light border h-100"><div class="fw-semibold mb-1">05 · Verify &amp; Retrieve</div><div class="small text-secondary">Verify integrity/signatures and securely retrieve authorized records.</div></div></div>
+    </div></div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-xl-8">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card-header bg-white border-0 p-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">My Cases</h2><p class="text-secondary mb-0">Cases you own or administer.</p></div><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">Create Case</a></div></div>
+        {% if cases %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Case ID</th><th>Title</th><th>Department</th><th>Status</th><th>Documents</th><th class="text-end pe-4">Action</th></tr></thead><tbody>{% for case in cases %}<tr><td class="ps-4 fw-semibold">{{ case.case_number }}</td><td>{{ case.title }}</td><td>{{ case.department or '—' }}</td><td><span class="badge rounded-pill text-bg-light border">{{ case.status }}</span></td><td>{{ case.documents|length }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('case_detail', case_id=case.id) }}">Open Case →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-5"><div class="display-6 mb-3">📁</div><h3 class="h5">No cases yet</h3><p class="text-secondary">Create your first case to start organizing protected documents.</p><a class="btn btn-success rounded-3" href="{{ url_for('create_case') }}">Create your first case</a></div>{% endif %}
+      </div>
+    </div>
+    <div class="col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Secure Operations</h2><p class="text-secondary mb-0">Jump directly to investigation controls.</p></div>
+        <div class="list-group list-group-flush">
+          <a class="list-group-item list-group-item-action px-4 py-3" href="{{ url_for('phase5_ui.evidence_list') }}"><div class="fw-semibold">Evidence &amp; custody</div><div class="small text-secondary">Review evidence records and transfers →</div></a>
+          <a class="list-group-item list-group-item-action px-4 py-3" href="{{ url_for('phase6_ui.signature_list') }}"><div class="fw-semibold">Digital signatures</div><div class="small text-secondary">Sign and verify important documents →</div></a>
+          <a class="list-group-item list-group-item-action px-4 py-3" href="{{ url_for('phase7_ui.document_search') }}"><div class="fw-semibold">Document intelligence</div><div class="small text-secondary">Search metadata and extracted text →</div></a>
+          {% if current_user.role == 'Admin' %}<a class="list-group-item list-group-item-action px-4 py-3" href="{{ url_for('phase8_security.monitoring_dashboard') }}"><div class="fw-semibold">Security monitoring</div><div class="small text-secondary">Review security events and alerts →</div></a>{% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
   {% if shared_documents %}
@@ -29,8 +55,8 @@
   {% endif %}
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-    <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Protected Documents</h2><p class="text-secondary mb-0">Documents owned by your account and protected with authenticated encryption.</p></div>
-    {% if files %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Document</th><th>Size</th><th>Added</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead><tbody>{% for file in files %}<tr><td class="ps-4 fw-medium">{{ file.original_filename }}</td><td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td><td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td><td><span class="badge rounded-pill text-bg-success">Encrypted</span></td><td class="pe-4 text-end"><a class="btn btn-sm btn-outline-success decrypt-download-trigger" href="{{ url_for('download', file_id=file.id) }}" data-download-url="{{ url_for('download', file_id=file.id) }}" data-document-name="{{ file.original_filename }}">Download →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">No protected documents yet.</p></div>{% endif %}
+    <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Protected Documents</h2><p class="text-secondary mb-0">Authorized documents protected with authenticated encryption.</p></div>
+    {% if files %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Document</th><th>Size</th><th>Added</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead><tbody>{% for file in files %}<tr><td class="ps-4 fw-medium">{{ file.original_filename }}</td><td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td><td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td><td><span class="badge rounded-pill text-bg-success">Protected</span></td><td class="pe-4 text-end"><a class="btn btn-sm btn-outline-success decrypt-download-trigger" href="{{ url_for('download', file_id=file.id) }}" data-download-url="{{ url_for('download', file_id=file.id) }}" data-document-name="{{ file.original_filename }}">Secure Download →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">No protected documents yet.</p></div>{% endif %}
   </div>
 </div>
 {% endblock %}
