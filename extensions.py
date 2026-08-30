@@ -12,10 +12,10 @@ class ApplicationLoginManager(LoginManager):
         super().init_app(app, add_context_processor=add_context_processor)
         from phase4_routes import register_phase4_routes
         register_phase4_routes(app)
-        # Phase 3 request hooks must be attached to the actual Flask app before
-        # requests are served. Import lazily here to avoid model import cycles.
         from audit_hooks import _register_app_hooks
         _register_app_hooks(app)
+        from security_headers import register_security_headers
+        register_security_headers(app)
 
 
 login_manager = ApplicationLoginManager()
