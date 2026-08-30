@@ -3,7 +3,7 @@
 {% block content %}
 <div class="dashboard-page container-fluid px-0 py-4">
   <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-    <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · INVESTIGATION WORKSPACE</span><h1 id="dynamic-greeting" class="display-5 fw-semibold mb-2" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1><p class="lead text-secondary mb-0">Your secure workspace for cases, legal documents, evidence, and investigation records.</p></div>
+    <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · INVESTIGATION WORKSPACE</span><h1 id="dynamic-greeting" class="display-5 fw-semibold mb-2" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1><div class="d-flex flex-wrap align-items-center gap-2 mb-2"><span class="badge rounded-pill text-bg-success px-3 py-2">👤 {{ current_user.role }}</span><span class="small text-secondary">Your current system role</span></div><p class="lead text-secondary mb-0">Your secure workspace for cases, legal documents, evidence, and investigation records.</p></div>
     <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">+ New Case</a><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add Document ↑</a><a class="btn btn-outline-success rounded-3" href="{{ url_for('phase7_ui.document_search') }}">Search Documents 🔎</a></div>
   </div>
   <div class="row g-3 mb-4">
