@@ -4,6 +4,18 @@ All notable changes for the PS 26190 development track are recorded here.
 
 ## [Unreleased]
 
+### Foundation Hardening — PS-26190 Compliance
+- Activated Phase 3 Flask integrity and request-audit hooks during application initialization.
+- Persisted encrypted-object SHA-256 hashes at upload and document-version creation time.
+- Blocked downloads when the stored encrypted object fails integrity verification.
+- Audited integrity-blocked download attempts and distinguished failed login events from successful logins.
+- Made `X-Forwarded-For` trust explicitly configurable instead of implicit.
+- Required an explicit production `SECRET_KEY` and hardened session/remember-me cookie settings.
+- Added baseline HTTP security headers without changing the application's visual theme.
+- Aligned case-detail management controls with backend authorization so unauthorized users do not see management actions.
+- Preserved the password-first Decrypt & Download workflow; GET requests never attempt decryption.
+- Added regression tests for Phase 3 hook registration/idempotence and security baseline behavior.
+
 ### Phase 7 — OCR & Intelligent Document Search
 - Added local Tesseract OCR processing with no paid OCR API dependency.
 - Added OCR document persistence and Alembic migration `0010_ocr_documents`.
@@ -87,4 +99,7 @@ All notable changes for the PS 26190 development track are recorded here.
 - Confirmed the existing `.gitignore` excludes `.env`, virtual environments, caches, instance data, uploads, databases, and editor settings.
 
 ### Next
-- Complete Phase 7 production migration and live verification, then tag `v0.8-ocr-search` and begin Phase 8.
+- Finish foundation hardening and regression/security gates.
+- Verify Phase 7 production migration and live OCR/search behavior.
+- Implement and restoration-test the PDP-required backup workflow.
+- Only then advance the project to final PS-26190 compliance testing.
