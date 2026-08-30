@@ -1,0 +1,1 @@
+Phase 7 OCR is intentionally local. Vercel deployments do not provide the system Tesseract executable. The OCR route must report local OCR unavailability instead of returning HTTP 500, while local Windows development continues to use TESSERACT_CMD.

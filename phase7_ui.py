@@ -15,7 +15,7 @@ from models.case_document import CaseDocument
 from models.file import StoredFile
 from models.ocr_document import OCRDocument
 from models.user import User
-from ocr_service import OCRUnavailableError, OCRUnsupportedFormatError, calculate_source_hash, extract_text
+from ocr_service import OCRUnavailableError, OCRUnsupportedFormatError, calculate_source_hash, extract_text, is_ocr_available
 
 
 phase7_ui = Blueprint("phase7_ui", __name__)
@@ -113,6 +113,16 @@ def document_ocr(document_id):
         flash("Document not found or access denied.", "error")
         return redirect(url_for("phase7_ui.document_search"))
 
+    # OCR is deliberately local. Vercel does not provide the system Tesseract
+    # executable, so report that condition rather than producing a server 500.
+    if not is_ocr_available():
+        flash(
+            "Local OCR is unavailable on this deployment because Tesseract is not installed. "
+            "Run SecureCloudStorage locally on a machine with Tesseract installed to use OCR.",
+            "error",
+        )
+        return redirect(request.referrer or url_for("phase7_ui.document_search"))
+
     password = request.form.get("encryption_password", "")
     if not password:
         flash("Enter the document encryption password to run local OCR.", "error")
@@ -136,38 +146,51 @@ def document_ocr(document_id):
     except (OCRUnavailableError, OCRUnsupportedFormatError, ValueError, OSError) as exc:
         flash(str(exc), "error")
         return redirect(request.referrer or url_for("phase7_ui.document_search"))
+    except Exception:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).exception("Phase 7 OCR processing failed")
+        flash("Local OCR could not be completed. No changes were made to the stored document.", "error")
+        return redirect(request.referrer or url_for("phase7_ui.document_search"))
 
-    record = document.ocr_document
-    if record is None:
-        record = OCRDocument(
-            case_document_id=document.id,
-            source_sha256=source_hash,
-            extracted_text=extracted_text,
-            engine="tesseract",
-            status="COMPLETED",
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
-        db.session.add(record)
-    else:
-        record.source_sha256 = source_hash
-        record.extracted_text = extracted_text
-        record.engine = "tesseract"
-        record.status = "COMPLETED"
-        record.updated_at = datetime.now(timezone.utc)
-    db.session.commit()
+    try:
+        record = document.ocr_document
+        if record is None:
+            record = OCRDocument(
+                case_document_id=document.id,
+                source_sha256=source_hash,
+                extracted_text=extracted_text,
+                engine="tesseract",
+                status="COMPLETED",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            db.session.add(record)
+        else:
+            record.source_sha256 = source_hash
+            record.extracted_text = extracted_text
+            record.engine = "tesseract"
+            record.status = "COMPLETED"
+            record.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).exception("Phase 7 OCR result persistence failed")
+        flash("OCR completed but its result could not be saved. No changes were made to the stored document.", "error")
+        return redirect(request.referrer or url_for("phase7_ui.document_search"))
+
     flash("OCR completed locally. The original encrypted document was preserved.", "success")
     return redirect(request.referrer or url_for("phase7_ui.document_search"))
 
 
 def _read_encrypted_file(filename):
-    from app import USE_SUPABASE_STORAGE, supabase, SUPABASE_STORAGE_BUCKET, UPLOAD_FOLDER
-    import os
-
-    if USE_SUPABASE_STORAGE:
-        return supabase.storage.from_(SUPABASE_STORAGE_BUCKET).download(filename)
-    with open(os.path.join(UPLOAD_FOLDER, filename), "rb") as encrypted_file:
-        return encrypted_file.read()
+    """Read encrypted bytes using the application's configured storage backend."""
+    # Reuse app.py's canonical storage helper instead of importing optional
+    # local-storage constants. In the deployed Supabase configuration,
+    # UPLOAD_FOLDER intentionally does not exist.
+    from app import read_encrypted_file
+    return read_encrypted_file(filename)
 
 
 def register_phase7_ui(app):
