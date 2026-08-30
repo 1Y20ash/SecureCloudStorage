@@ -291,27 +291,49 @@ def upload():
     return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
 
 
-@app.route("/documents/<int:file_id>/download")
+@app.route("/documents/<int:file_id>/download", methods=["GET", "POST"])
 @login_required
 def download(file_id):
     stored_file = db.session.get(StoredFile, file_id)
     if stored_file is None:
         flash("File not found.", "error")
         return redirect(url_for("dashboard"))
-    document = db.session.scalar(db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id))
+
+    document = db.session.scalar(
+        db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id)
+    )
     if document is None or not can_download_document(current_user, document):
         flash("You are not authorized to download this document.", "error")
         return redirect(url_for("dashboard"))
-    password = request.args.get("password", "")
+
+    # GET is intentionally non-decrypting. The UI opens the password prompt first.
+    # Keeping this fallback avoids attempting decryption with an empty password.
+    if request.method == "GET":
+        flash("Enter the document encryption password to decrypt and download the file.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+
+    password = request.form.get("password", "")
     if not password:
         flash("A document password is required.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
+
     try:
-        decrypted = decrypt_file(read_encrypted_file(stored_file.encrypted_filename), password)
+        decrypted = decrypt_file(
+            read_encrypted_file(stored_file.encrypted_filename),
+            password,
+        )
     except InvalidTag:
-        flash("Incorrect password or corrupted encrypted file.", "error")
+        flash("Incorrect encryption password.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-    return send_file(io.BytesIO(decrypted), as_attachment=True, download_name=stored_file.original_filename)
+    except ValueError:
+        flash("The encrypted file format is invalid or corrupted.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+
+    return send_file(
+        io.BytesIO(decrypted),
+        as_attachment=True,
+        download_name=stored_file.original_filename,
+    )
 
 
 @app.route("/documents/<int:document_id>/versions", methods=["POST"])
