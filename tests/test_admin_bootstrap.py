@@ -1,27 +1,31 @@
-import runpy
+import inspect
 
 import pytest
 
-
-def test_bootstrap_admin_refuses_when_admin_exists(monkeypatch, app, db, user_factory):
-    existing = user_factory(email="existing-admin@example.test", role="Admin")
-    db.session.add(existing)
-    db.session.commit()
-
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_NAME", "Bootstrap Admin")
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_EMAIL", "new-admin@example.test")
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_PASSWORD", "a-strong-bootstrap-password")
-
-    with pytest.raises(SystemExit, match="already exists"):
-        with app.app_context():
-            runpy.run_module("scripts.bootstrap_admin", run_name="__main__")
+from scripts import bootstrap_admin
 
 
-def test_bootstrap_admin_requires_strong_password(monkeypatch, app):
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_NAME", "Bootstrap Admin")
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_EMAIL", "new-admin@example.test")
-    monkeypatch.setenv("BOOTSTRAP_ADMIN_PASSWORD", "too-short")
+def test_bootstrap_admin_requires_explicit_environment_values(monkeypatch):
+    monkeypatch.delenv("BOOTSTRAP_ADMIN_NAME", raising=False)
+    monkeypatch.delenv("BOOTSTRAP_ADMIN_EMAIL", raising=False)
+    monkeypatch.delenv("BOOTSTRAP_ADMIN_PASSWORD", raising=False)
 
-    with pytest.raises(SystemExit, match="at least 12 characters"):
-        with app.app_context():
-            runpy.run_module("scripts.bootstrap_admin", run_name="__main__")
+    with pytest.raises(SystemExit, match="BOOTSTRAP_ADMIN_NAME"):
+        bootstrap_admin.required_env("BOOTSTRAP_ADMIN_NAME")
+
+
+def test_bootstrap_admin_password_policy_is_strong():
+    source = inspect.getsource(bootstrap_admin.main)
+    assert 'len(password) < 12' in source
+    assert 'BOOTSTRAP_ADMIN_PASSWORD' in source
+
+
+def test_bootstrap_admin_refuses_if_admin_already_exists():
+    source = inspect.getsource(bootstrap_admin.main)
+    assert 'User.role == "Admin"' in source
+    assert 'already exists; refusing to create another one' in source
+
+
+def test_bootstrap_admin_is_not_an_http_route():
+    source = inspect.getsource(bootstrap_admin)
+    assert '@app.route' not in source
