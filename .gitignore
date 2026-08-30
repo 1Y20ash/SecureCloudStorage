@@ -10,3 +10,5 @@ uploads/
 .coverage
 htmlcov/
 *.log
+backups/
+*.scsb
