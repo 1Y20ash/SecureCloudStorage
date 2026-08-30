@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from config import Config
 
 
@@ -11,11 +13,8 @@ def test_production_secret_is_required(monkeypatch):
     monkeypatch.setenv("VERCEL", "1")
     monkeypatch.delenv("SECRET_KEY", raising=False)
     namespace = {}
-    exec((ROOT / "config.py").read_text(encoding="utf-8"), namespace)
-    try:
-        namespace["Config"]
-    except RuntimeError:
-        raise AssertionError("production configuration should be importable")
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be configured in production"):
+        exec((ROOT / "config.py").read_text(encoding="utf-8"), namespace)
 
 
 def test_secure_session_configuration():
