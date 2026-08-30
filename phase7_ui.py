@@ -5,17 +5,19 @@ from datetime import datetime, timezone
 from cryptography.exceptions import InvalidTag
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import or_
 
-from authz import can_access_case, can_access_document
+from authz import can_access_document
 from crypto.encryption import decrypt_file
 from extensions import db
-from models.case import Case
 from models.case_document import CaseDocument
-from models.file import StoredFile
 from models.ocr_document import OCRDocument
-from models.user import User
-from ocr_service import OCRUnavailableError, OCRUnsupportedFormatError, calculate_source_hash, extract_text
+from ocr_service import (
+    OCRUnavailableError,
+    OCRUnsupportedFormatError,
+    calculate_source_hash,
+    extract_text,
+    is_ocr_available,
+)
 
 
 phase7_ui = Blueprint("phase7_ui", __name__)
@@ -113,6 +115,16 @@ def document_ocr(document_id):
         flash("Document not found or access denied.", "error")
         return redirect(url_for("phase7_ui.document_search"))
 
+    # OCR is deliberately local. Vercel can host the application, but it does
+    # not provide the system Tesseract executable used by this Phase 7 feature.
+    if not is_ocr_available():
+        flash(
+            "Local OCR is unavailable on this deployment because Tesseract is not installed. "
+            "Run SecureCloudStorage locally on a machine with Tesseract installed to use OCR.",
+            "error",
+        )
+        return redirect(request.referrer or url_for("phase7_ui.document_search"))
+
     password = request.form.get("encryption_password", "")
     if not password:
         flash("Enter the document encryption password to run local OCR.", "error")
@@ -130,32 +142,44 @@ def document_ocr(document_id):
             stored_file.original_filename,
             request.form.get("language", "eng").strip() or "eng",
         )
+
+        record = document.ocr_document
+        if record is None:
+            record = OCRDocument(
+                case_document_id=document.id,
+                source_sha256=source_hash,
+                extracted_text=extracted_text,
+                engine="tesseract",
+                status="COMPLETED",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            db.session.add(record)
+        else:
+            record.source_sha256 = source_hash
+            record.extracted_text = extracted_text
+            record.engine = "tesseract"
+            record.status = "COMPLETED"
+            record.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
     except InvalidTag:
+        db.session.rollback()
         flash("Incorrect password or corrupted encrypted file. OCR was not performed.", "error")
         return redirect(request.referrer or url_for("phase7_ui.document_search"))
     except (OCRUnavailableError, OCRUnsupportedFormatError, ValueError, OSError) as exc:
+        db.session.rollback()
         flash(str(exc), "error")
         return redirect(request.referrer or url_for("phase7_ui.document_search"))
+    except Exception:
+        # OCR must never turn an environment-specific failure into a Flask 500.
+        # Log the diagnostic server-side while keeping the user-facing message safe.
+        db.session.rollback()
+        current_user  # keep authentication context explicit for this protected route
+        import logging
+        logging.getLogger(__name__).exception("Phase 7 OCR processing failed")
+        flash("Local OCR could not be completed. No changes were made to the stored document.", "error")
+        return redirect(request.referrer or url_for("phase7_ui.document_search"))
 
-    record = document.ocr_document
-    if record is None:
-        record = OCRDocument(
-            case_document_id=document.id,
-            source_sha256=source_hash,
-            extracted_text=extracted_text,
-            engine="tesseract",
-            status="COMPLETED",
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
-        db.session.add(record)
-    else:
-        record.source_sha256 = source_hash
-        record.extracted_text = extracted_text
-        record.engine = "tesseract"
-        record.status = "COMPLETED"
-        record.updated_at = datetime.now(timezone.utc)
-    db.session.commit()
     flash("OCR completed locally. The original encrypted document was preserved.", "success")
     return redirect(request.referrer or url_for("phase7_ui.document_search"))
 
