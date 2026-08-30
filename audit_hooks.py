@@ -7,7 +7,6 @@ from flask import appcontext_pushed, flash, g, has_request_context, redirect, re
 from flask_login import current_user
 from sqlalchemy import event
 from sqlalchemy.orm import Session
-from werkzeug.utils import secure_filename
 
 from config import Config
 from extensions import db
@@ -38,7 +37,7 @@ def _ip_address():
     return request.remote_addr
 
 
-def _resource_case_id(target):
+def _resource_case_id(target, session=None):
     if isinstance(target, Case):
         return target.id
     if isinstance(target, CaseDocument):
@@ -48,7 +47,11 @@ def _resource_case_id(target):
     if isinstance(target, DocumentShare):
         return target.case_document.case_id if target.case_document else None
     if isinstance(target, StoredFile):
-        return target.case_document.case_id if target.case_document else None
+        db_session = session or db.session
+        case_document = db_session.scalar(
+            db.select(CaseDocument).where(CaseDocument.stored_file_id == target.id)
+        )
+        return case_document.case_id if case_document else None
     return None
 
 
@@ -58,7 +61,7 @@ def _record(session, action, target, success=True, details=None):
         action=action,
         resource_type=target.__class__.__name__ if target is not None else "REQUEST",
         resource_id=getattr(target, "id", None),
-        case_id=_resource_case_id(target) if target is not None else None,
+        case_id=_resource_case_id(target, session),
         success=success,
         ip_address=_ip_address(),
         details=(details or "")[:500] or None,
@@ -95,13 +98,20 @@ def _sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def _case_id_for_stored_file(file_record):
+    case_document = db.session.scalar(
+        db.select(CaseDocument).where(CaseDocument.stored_file_id == file_record.id)
+    )
+    return case_document.case_id if case_document else None
+
+
 def _write_integrity_failure(file_record, expected, actual, check_type="encrypted storage"):
     db.session.add(AuditLog(
         user_id=_request_user_id(),
         action="INTEGRITY_FAILURE",
         resource_type="StoredFile",
         resource_id=file_record.id,
-        case_id=file_record.case_document.case_id if file_record.case_document else None,
+        case_id=_case_id_for_stored_file(file_record),
         success=False,
         ip_address=_ip_address(),
         details=f"{check_type} SHA-256 mismatch: expected {expected}, received {actual}"[:500],
@@ -121,7 +131,9 @@ def _verify_download_integrity():
         return None
 
     from authz import can_download_document
-    document = stored_file.case_document
+    document = db.session.scalar(
+        db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id)
+    )
     if document is None or not can_download_document(current_user, document):
         return None
 
@@ -141,8 +153,8 @@ def _verify_download_integrity():
     return None
 
 
-# Kept for compatibility with legacy records created before encrypted_sha256_hash
-# existed. New uploads and versions populate the field directly in app.py.
+# Kept as a no-op compatibility hook. New uploads and versions populate the
+# encrypted object hash directly before their database transaction commits.
 def _backfill_encrypted_storage_hash(response):
     return None
 
