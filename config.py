@@ -11,6 +11,13 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Proxy headers must be explicitly trusted. Leaving this disabled is the
+    # safe default for local development and prevents clients from spoofing
+    # their address through X-Forwarded-For.
+    TRUST_PROXY_HEADERS = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in {
+        "1", "true", "yes", "on"
+    }
+
     # Use PostgreSQL-specific SSL settings only when PostgreSQL is configured.
     # SQLite does not accept sslmode or connect_timeout.
     if SQLALCHEMY_DATABASE_URI.startswith(("postgresql://", "postgresql+psycopg2://")):
