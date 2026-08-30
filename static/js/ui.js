@@ -31,9 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 4. Live AES-256 Ciphertext Animation Stream
   const ciphertextStream = document.getElementById("ciphertext-stream");
+  const hexChars = "0123456789ABCDEF";
+  const generateHex = (length) => Array.from({ length }, () => hexChars[Math.floor(Math.random() * hexChars.length)]).join("");
   if (ciphertextStream) {
-    const hexChars = "0123456789ABCDEF";
-    const generateHex = (length) => Array.from({ length }, () => hexChars[Math.floor(Math.random() * hexChars.length)]).join("");
     setInterval(() => {
       ciphertextStream.textContent = `8F3A91${generateHex(10)}...${generateHex(4)}\n${generateHex(8)}A91F${generateHex(8)}\n7C12${generateHex(12)}`;
     }, 400);
@@ -105,13 +105,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-
   // 8. Secure Decrypt & Download flow
   const decryptDownloadModalElement = document.getElementById("decryptDownloadModal");
   const decryptDownloadForm = document.getElementById("decryptDownloadForm");
   const decryptDownloadPassword = document.getElementById("decryptDownloadPassword");
   const decryptDownloadDocumentName = document.getElementById("decryptDownloadDocumentName");
   const toggleDecryptPassword = document.getElementById("toggleDecryptPassword");
+  const decryptDownloadError = document.getElementById("decryptDownloadError");
+  const decryptDownloadSubmit = decryptDownloadForm?.querySelector('button[type="submit"]');
+
+  const showDecryptError = (message) => {
+    if (decryptDownloadError) {
+      decryptDownloadError.textContent = `⚠️ ${message}`;
+      decryptDownloadError.classList.remove("d-none");
+    }
+  };
 
   document.querySelectorAll(".decrypt-download-trigger").forEach((trigger) => {
     trigger.addEventListener("click", (event) => {
@@ -120,6 +128,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       decryptDownloadForm.action = trigger.dataset.downloadUrl || trigger.href;
       decryptDownloadForm.reset();
+      decryptDownloadForm.removeAttribute("data-submitting");
+      if (decryptDownloadError) decryptDownloadError.classList.add("d-none");
+      if (decryptDownloadSubmit) {
+        decryptDownloadSubmit.disabled = false;
+        decryptDownloadSubmit.style.opacity = "1";
+      }
 
       if (decryptDownloadDocumentName) {
         decryptDownloadDocumentName.textContent = trigger.dataset.documentName || "Selected document";
@@ -131,6 +145,91 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Handle decryption with fetch so a failed POST/redirect can NEVER be treated
+  // by the browser as a file download. Only an explicit successful attachment
+  // response is converted to a downloadable Blob.
+  if (decryptDownloadForm) {
+    decryptDownloadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (decryptDownloadForm.dataset.submitting === "true") return;
+
+      const password = decryptDownloadPassword?.value || "";
+      if (!password) {
+        showDecryptError("A document password is required.");
+        return;
+      }
+
+      decryptDownloadForm.dataset.submitting = "true";
+      if (decryptDownloadSubmit) {
+        decryptDownloadSubmit.disabled = true;
+        decryptDownloadSubmit.textContent = "Decrypting…";
+      }
+      if (decryptDownloadError) decryptDownloadError.classList.add("d-none");
+
+      try {
+        const response = await fetch(decryptDownloadForm.action, {
+          method: "POST",
+          body: new FormData(decryptDownloadForm),
+          credentials: "same-origin",
+          cache: "no-store",
+          redirect: "follow",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+
+        const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+        const disposition = response.headers.get("Content-Disposition") || "";
+
+        // A valid download must be a successful attachment response. HTML is
+        // always treated as an error/flash response, never as a file.
+        const isDownload = response.ok && disposition.toLowerCase().includes("attachment") && !contentType.includes("text/html");
+        if (!isDownload) {
+          let message = "Unable to decrypt the document. Please check the password and try again.";
+          try {
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+            const flash = doc.querySelector(".flash.error, .flash.alert-danger");
+            if (flash?.textContent?.trim()) message = flash.textContent.trim();
+          } catch (_) {
+            // Keep the safe generic message when the response cannot be parsed.
+          }
+          showDecryptError(message.replace(/^⚠️\s*/, ""));
+          decryptDownloadForm.dataset.submitting = "false";
+          if (decryptDownloadSubmit) {
+            decryptDownloadSubmit.disabled = false;
+            decryptDownloadSubmit.textContent = "Decrypt & Download";
+          }
+          decryptDownloadPassword?.focus();
+          decryptDownloadPassword?.select();
+          return;
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = objectUrl;
+        anchor.download = decryptDownloadDocumentName?.textContent || "download";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+
+        decryptDownloadForm.dataset.submitting = "false";
+        if (decryptDownloadSubmit) {
+          decryptDownloadSubmit.disabled = false;
+          decryptDownloadSubmit.textContent = "Decrypt & Download";
+        }
+      } catch (_) {
+        showDecryptError("The download could not be completed. Please try again.");
+        decryptDownloadForm.dataset.submitting = "false";
+        if (decryptDownloadSubmit) {
+          decryptDownloadSubmit.disabled = false;
+          decryptDownloadSubmit.textContent = "Decrypt & Download";
+        }
+      }
+    });
+  }
+
   if (toggleDecryptPassword && decryptDownloadPassword) {
     toggleDecryptPassword.addEventListener("click", () => {
       const visible = decryptDownloadPassword.type === "text";
@@ -141,7 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 9. Install SecureVault popup — home page only, once per browser session.
-  // Only show the popup when the browser has provided a native install prompt.
   let deferredInstallPrompt = null;
   const installModalElement = document.getElementById("installAppModal");
   const installButton = document.getElementById("installAppButton");
