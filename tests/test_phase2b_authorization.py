@@ -28,14 +28,19 @@ def test_unassigned_user_is_denied_case_access():
     assert can_access_case(unassigned, target_case) is False
 
 
-def test_case_owner_can_manage_assignments():
-    owner = user(1)
+def test_authorized_case_owner_can_manage_assignments():
+    owner = user(1, "Investigating Officer")
     assert can_manage_case_assignments(owner, case(1)) is True
 
 
-def test_non_owner_cannot_manage_assignments():
-    other_user = user(2)
+def test_authorized_non_owner_cannot_manage_assignments():
+    other_user = user(2, "Investigating Officer")
     assert can_manage_case_assignments(other_user, case(1)) is False
+
+
+def test_police_officer_cannot_manage_assignments_even_when_owner():
+    police_owner = user(1, "Police Officer")
+    assert can_manage_case_assignments(police_owner, case(1)) is False
 
 
 def test_admin_can_manage_assignments():
@@ -50,7 +55,6 @@ def test_expired_share_is_inactive():
 
 def test_active_download_share_allows_download():
     viewer = user(2)
-    owner = user(1)
     target_case = case(1)
     share = SimpleNamespace(
         shared_with_user_id=2,
