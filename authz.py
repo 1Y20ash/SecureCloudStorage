@@ -28,7 +28,17 @@ def is_admin(user):
 
 
 def share_is_active(share):
-    return share.expires_at is None or share.expires_at > datetime.now(timezone.utc)
+    if share.expires_at is None:
+        return True
+
+    expires_at = share.expires_at
+    # SQLite may return DateTime(timezone=True) values without tzinfo.
+    # Treat such persisted values as UTC so they can be compared safely with
+    # the application's timezone-aware UTC clock.
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    return expires_at > datetime.now(timezone.utc)
 
 
 def has_case_assignment(user, case):
