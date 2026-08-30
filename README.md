@@ -1,318 +1,242 @@
-# 🔐 SecureCloudStorage
+# 🔐 SecureCloudStorage — PS-26190 Secure Digital Document Management System
 
-### Privacy-first cloud storage with client-side file encryption
+SecureCloudStorage has evolved from a privacy-first encrypted cloud-storage application into a **case-centric Secure Digital Document Management System (DMS)** for legal and investigation-document workflows, developed against **Problem Statement PS 26190**.
 
-**SecureCloudStorage** is a full-stack secure file-storage web application built to demonstrate how modern web applications can combine **authentication, cryptography, database management, and cloud storage** into one practical system.
-
-Files are encrypted with **AES-256-GCM before they are persisted**, while authenticated users can upload, manage, download, decrypt, and delete their own files.
+> **Educational / demonstration system:** this project demonstrates security, document-management, evidence, integrity, authorization, OCR and cryptographic-signature concepts. It does **not** claim statutory or legal validity, professional security certification, or legal admissibility merely because a feature is implemented.
 
 <p align="center">
   <a href="https://secure-cloud-storage-nine.vercel.app"><strong>🚀 Live Demo</strong></a> ·
   <a href="https://github.com/1Y20ash/SecureCloudStorage"><strong>💻 Source Code</strong></a>
 </p>
 
----
+## Project Status
 
-## 🌐 Live Project
+**PS-26190 implementation:** Phase 0–10 integrated into `main`  
+**Latest integration commit:** `0b7f5b2fe1343b7458e26cdaee3ad0b2a313dd9f`  
+**Release target:** `v1.1-ps-26190-final`
 
-| | Link |
-|---|---|
-| 🚀 **Live Demo** | https://secure-cloud-storage-nine.vercel.app |
-| 💻 **GitHub Repository** | https://github.com/1Y20ash/SecureCloudStorage |
+The final compliance evidence index is maintained in [`docs/PS26190_COMPLIANCE_MATRIX.md`](docs/PS26190_COMPLIANCE_MATRIX.md).
 
-> **Project focus:** Secure file storage, authenticated access, AES-256-GCM encryption, cloud storage, and secure file lifecycle management.
+## Core Capabilities
 
----
+- 🔐 AES-256-GCM encrypted document storage
+- 🔑 PBKDF2-HMAC-SHA256 key derivation
+- 👥 Deny-by-default role-based access control
+- 📁 Case management and case-centric document organization
+- 🧾 Audit trail and SHA-256 integrity verification
+- 🔄 Document versioning and lifecycle controls
+- ⚖️ Evidence records and chain-of-custody tracking
+- ✍️ Ed25519 digital-signature prototype and verification
+- 🔎 Local Tesseract OCR and metadata/OCR-text search
+- 🤝 Case assignment and controlled document sharing
+- 🛡️ Security-event monitoring and session/security hardening
+- 💾 Encrypted backup and tested restore workflow
+- 🧪 Automated regression/security tests and dependency auditing
 
-## ✨ Why I Built This
+## PS-26190 Phase Status
 
-Cloud storage makes file access convenient, but sensitive files should not simply be treated as ordinary uploads.
+| Phase | Capability | Status |
+|---|---|---|
+| 0 | Baseline & governance | ✅ Complete |
+| 1 | Core document & case management | ✅ Complete |
+| 2 | RBAC | ✅ Complete |
+| 3 | Audit & integrity | ✅ Complete |
+| 4 | Lifecycle & versioning | ✅ Complete |
+| 5 | Evidence & chain of custody | ✅ Complete |
+| 6 | Digital signatures | ✅ Complete |
+| 7 | OCR & intelligent search | ⚠️ Implemented; production verification remains deployment-specific |
+| 8 | Collaboration & security monitoring | ✅ Core scope complete |
+| 9 | Backup, recovery & hardening | ✅ Implemented/tested; deployment restore drill remains deployment-specific |
+| 10 | Final testing & PS compliance | ✅ Implemented and CI-validated |
 
-This project explores a simple security-first approach:
+## Security Architecture
 
-**Authenticate → Encrypt → Store → Authenticate → Decrypt → Download**
-
-The goal was to build a practical application where security is part of the file-storage workflow rather than an afterthought.
-
----
-
-## 🚀 Key Features
-
-- 🔐 **User authentication** — registration, login, logout, and protected dashboard access
-- 🛡️ **AES-256-GCM encryption** — files are encrypted before storage
-- 🔑 **Password-based key derivation** — PBKDF2-HMAC-SHA256 with 600,000 iterations
-- 🧂 **Unique cryptographic salt** — a fresh 16-byte salt is generated for each encrypted file
-- 🎲 **Unique nonce** — a fresh 12-byte nonce is generated for each encryption operation
-- ☁️ **Cloud storage** — encrypted objects can be stored in Supabase Storage
-- 👤 **User isolation** — file operations are scoped to the authenticated owner
-- ⬇️ **Secure download** — the correct decryption password is required to recover the original file
-- 🗑️ **File management** — users can delete their stored files
-- 📦 **Multiple file types** — designed to handle documents, images, archives, code files, and other binary files
-- 📏 **10 MB upload limit** — intentionally enforced for the current project
-- ⚡ **Deployment-ready architecture** — configured for serverless deployment on Vercel
-
----
-
-## 🔒 Security Architecture
-
-The core encryption implementation uses **AES-256-GCM**, an authenticated encryption mode that provides both confidentiality and integrity.
-
-### Encryption flow
+### Document encryption
 
 ```text
-                    USER
-                     │
-                     │ File + encryption password
-                     ▼
-              ┌───────────────┐
-              │   Flask App   │
-              └───────┬───────┘
-                      │
-                      ▼
-            ┌───────────────────┐
-            │   PBKDF2-HMAC     │
-            │   SHA-256         │
-            │   600,000 rounds  │
-            └─────────┬─────────┘
-                      │
-                      ▼
-               256-bit AES key
-                      │
-                      ▼
-            ┌───────────────────┐
-            │    AES-256-GCM    │
-            └─────────┬─────────┘
-                      │
-                      ▼
-             Encrypted ciphertext
-                      │
-                      ▼
-             Supabase Storage
+File + encryption password
+          ↓
+PBKDF2-HMAC-SHA256
+600,000 iterations
+          ↓
+256-bit AES key
+          ↓
+AES-256-GCM
+          ↓
+Encrypted object
+          ↓
+Storage
 ```
 
-### Stored encrypted format
+Each encrypted file uses a fresh 16-byte salt and 12-byte nonce. The encrypted representation includes authenticated ciphertext and its authentication tag.
 
-The application stores encrypted data in the following structure:
+### Authorization
 
 ```text
-MAGIC | SALT | NONCE | CIPHERTEXT + AUTHENTICATION TAG
+Request
+  ↓
+Authentication
+  ↓
+Role capability
+  ↓
+Case ownership / assignment
+  ↓
+Document category / permission
+  ↓
+Allow or deny
 ```
 
-The original plaintext file is not written to persistent storage by the upload workflow.
+The server-side authorization layer is the security boundary; hiding a UI control does not grant or revoke permission.
 
----
+## Evidence & Integrity
 
-## 🧩 Technology Stack
+Important documents and evidence use SHA-256 integrity metadata. Evidence custody transitions are recorded as ordered events, and custody protections prevent silent alteration of the chain.
 
-### Backend
+## Digital Signatures
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat-square&logo=sqlalchemy&logoColor=white)
+The project uses **Ed25519** through the existing open-source `cryptography` dependency. A document hash is signed and the resulting signed record stores signer/timestamp/signature information.
 
-- Python
-- Flask
-- Flask-Login
-- Flask-SQLAlchemy
-- SQLAlchemy
-- Jinja2
-- Werkzeug
+This is a **technical signature-verification prototype**. It must not be presented as a legally recognized/statutory digital signature without the separate legal and regulatory requirements applicable to a real deployment.
 
-### Security
+## OCR & Search
 
-![Cryptography](https://img.shields.io/badge/Cryptography-AES--256--GCM-1F2937?style=flat-square)
+OCR is designed around local/open-source processing with Tesseract. The original encrypted document is preserved while OCR text is stored separately and bound to the source document with SHA-256. Search supports filename, case, category, officer, date, metadata and OCR text.
 
-- `cryptography`
-- AES-256-GCM
-- PBKDF2-HMAC-SHA256
-- Random salt and nonce generation
-- Authenticated encryption
+Production OCR migration/live verification remains an explicit deployment gate and is not inferred from source code alone.
 
-### Frontend
+## Backup & Recovery
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+Backups cover application data and encrypted document objects. Backup containers are authenticated/encrypted and use a separate backup key. The automated suite verifies a SQLite round trip plus tamper, wrong-key, malformed-container and validation failures.
 
-- HTML5
-- CSS3
-- JavaScript
-- Jinja2 templates
+For deployments using external object storage, a deployment-level restore drill must verify the database and object store together before production recovery is claimed.
 
-### Data & Infrastructure
+## Technology Stack
 
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
+- **Backend:** Python, Flask, Flask-Login, Flask-SQLAlchemy, SQLAlchemy, Jinja2
+- **Cryptography:** `cryptography`, AES-256-GCM, PBKDF2-HMAC-SHA256, Ed25519, SHA-256
+- **Frontend:** HTML5, CSS3, JavaScript, Jinja2 templates
+- **Database:** PostgreSQL-compatible deployment configuration with SQLite local fallback
+- **Migrations:** Alembic
+- **OCR:** Tesseract
+- **Testing:** pytest
+- **CI/security:** GitHub Actions dependency audit and multi-version test workflow
+- **Storage/deployment:** encrypted object storage and existing deployment configuration
 
-- Supabase Storage
-- PostgreSQL-compatible database configuration
-- SQLite fallback for local development
-- Vercel deployment
+All project technology decisions are subject to the free/open-source policy documented in `TECHNOLOGY_DECISIONS.md`.
 
----
-
-## 📂 Project Structure
+## Repository Structure
 
 ```text
 SecureCloudStorage/
-│
-├── app.py                    # Flask application and routes
-├── config.py                 # Environment-based configuration
-├── extensions.py             # Flask extensions
-├── requirements.txt          # Python dependencies
-├── supabase_schema.sql       # Database schema
-│
+├── app.py
+├── authz.py
+├── audit.py
+├── audit_hooks.py
+├── backup.py
+├── config.py
+├── digital_signatures.py
+├── document_lifecycle.py
+├── evidence_management.py
+├── integrity.py
+├── lifecycle.py
 ├── crypto/
-│   └── encryption.py         # AES-256-GCM encryption/decryption
-│
 ├── models/
-│   ├── file.py               # Stored file model
-│   └── user.py               # User model
-│
-├── templates/                # Jinja2 HTML templates
-│   ├── home.html
-│   ├── login.html
-│   ├── register.html
-│   ├── dashboard.html
-│   ├── upload.html
-│   └── download.html
-│
-└── static/                   # CSS and JavaScript assets
+├── migrations/
+├── templates/
+├── static/
+├── tests/
+├── docs/
+├── .github/workflows/
+├── README.md
+├── CHANGELOG.md
+├── DEVELOPMENT_LOG.md
+├── SECURITY.md
+└── TECHNOLOGY_DECISIONS.md
 ```
 
----
+## Development & Version Control
 
-## ⚙️ Run Locally
+The project follows the PDP workflow:
 
-### 1. Clone the repository
+```text
+Issue
+  ↓
+Feature / security branch
+  ↓
+Development
+  ↓
+Testing
+  ↓
+Security review
+  ↓
+Pull request
+  ↓
+Review / approval gate
+  ↓
+Merge
+  ↓
+Tag / release
+```
+
+`main` is intended to remain the stable integration branch. PS-26190 work was developed through the dedicated development line and phase-specific branches before final integration.
+
+## Data Privacy Rule
+
+Development and demonstration environments must use **synthetic/dummy data only**, including synthetic FIRs, police reports, witness statements, evidence records, test PDFs/images and fake accounts. Real FIRs, evidence, confidential court documents, credentials or sensitive personal information must not be uploaded to ordinary development/demo environments.
+
+## Free-Resource Rule
+
+The project uses only free/open-source software or genuinely free resources without a mandatory paid dependency for the implemented scope. Before adopting a new external service, cost, license, privacy, local-execution and fallback considerations must be recorded in `TECHNOLOGY_DECISIONS.md`.
+
+## Local Development
 
 ```bash
 git clone https://github.com/1Y20ash/SecureCloudStorage.git
 cd SecureCloudStorage
+python -m venv .venv
 ```
 
-### 2. Create a virtual environment
-
-**Windows PowerShell:**
+Windows PowerShell:
 
 ```powershell
-python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-**macOS / Linux:**
+macOS/Linux:
 
 ```bash
-python -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
-
-Create a `.env` file with the configuration required by the application:
-
-```env
-SECRET_KEY=your-secret-key
-DATABASE_URL=your-database-url
-SUPABASE_URL=your-supabase-url
-SUPABASE_SECRET_KEY=your-supabase-secret-key
-SUPABASE_STORAGE_BUCKET=encrypted-files
-```
-
-For local development, the application can fall back to a SQLite database when `DATABASE_URL` is not provided.
-
-### 5. Start the application
+Configure required environment variables locally in `.env` (never commit the file), then run:
 
 ```bash
 python app.py
 ```
 
-Open the local Flask URL shown in your terminal.
+## Security Notice
 
----
+This is an educational/project implementation and has not been represented as a professionally audited production security system. Review `SECURITY.md` before deployment or demonstration.
 
-## 🛡️ Security Practices
+## Documentation
 
-This project currently implements several security-focused practices:
+- `docs/PS26190_COMPLIANCE_MATRIX.md` — final PDP compliance/evidence matrix
+- `DEVELOPMENT_LOG.md` — phase history and completion boundaries
+- `CHANGELOG.md` — project changes
+- `SECURITY.md` — security and data-handling policy
+- `TECHNOLOGY_DECISIONS.md` — free/open-source technology policy and decisions
+- `docs/PHASE10_RBAC_MATRIX.md` — Phase 10 authorization matrix
+- `docs/PHASE9_BACKUP_RECOVERY.md` — backup/restore design and testing
+- `docs/PHASE6_DIGITAL_SIGNATURES.md` — digital-signature implementation
+- `docs/PHASE5_EVIDENCE_CHAIN_OF_CUSTODY.md` — evidence/custody implementation
 
-- Files are encrypted before being persisted.
-- AES-256-GCM provides confidentiality and authentication.
-- A random salt is generated for every encrypted file.
-- A random nonce is generated for every encryption operation.
-- Password-derived keys are generated with PBKDF2-HMAC-SHA256.
-- File download and deletion require authentication.
-- File queries are restricted to the currently authenticated user.
-- Secret configuration values are read from environment variables.
-- Encrypted storage uses opaque generated filenames rather than the original filename.
-- The upload size is limited to 10 MB in the current implementation.
-
-> **Important:** This is an educational/project implementation, not a replacement for a professionally audited production security system. Strong user passwords and secure secret management remain essential.
-
----
-
-## 📊 Application Workflow
-
-```text
-Register / Login
-       │
-       ▼
-   Dashboard
-       │
-       ├───────────────┐
-       │               │
-       ▼               ▼
-    Upload          Manage Files
-       │               │
-       ▼               ├── Download
-   Encrypt            └── Delete
-       │
-       ▼
- Store encrypted data
-       │
-       ▼
- Supabase / Local Storage
-```
-
----
-
-## 🎯 What This Project Demonstrates
-
-This project brings together several concepts that are important in modern software development:
-
-- **Applied cryptography** — implementing authenticated encryption correctly using established primitives
-- **Secure authentication** — protecting application routes and user-specific resources
-- **Backend development** — designing Flask routes and application logic
-- **Database integration** — storing users and file metadata with SQLAlchemy
-- **Cloud storage** — integrating Supabase Storage for encrypted objects
-- **Environment-based configuration** — keeping deployment secrets outside source code
-- **Serverless deployment** — adapting database connections and storage for Vercel
-- **Security-aware system design** — considering confidentiality, integrity, authentication, and access control together
-
----
-
-## 🔮 Future Improvements
-
-Possible future enhancements include:
-
-- Larger-file and streaming encryption support
-- Password reset and account recovery
-- Multi-factor authentication
-- File sharing with controlled permissions
-- Folder management
-- File previews
-- Stronger rate limiting and abuse protection
-- Automated security testing and dependency scanning
-- Expanded audit logging
-
----
-
-## 👨‍💻 Author
+## Author
 
 ### Yash Chitmalwar
 
@@ -321,15 +245,3 @@ Computer Science & Engineering (AI/ML) Student
 - GitHub: https://github.com/1Y20ash
 - Project: https://github.com/1Y20ash/SecureCloudStorage
 - Live Demo: https://secure-cloud-storage-nine.vercel.app
-
----
-
-## ⭐ Support the Project
-
-If you find the project interesting, consider giving the repository a ⭐ on GitHub and sharing feedback or suggestions.
-
----
-
-<p align="center">
-  <strong>🔐 Secure your files. Own your data.</strong>
-</p>
