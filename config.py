@@ -4,22 +4,34 @@ from sqlalchemy.pool import NullPool
 
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-this")
+    _secret_key = os.getenv("SECRET_KEY")
+    _production = os.getenv("FLASK_ENV", "").lower() == "production" or os.getenv("VERCEL") == "1"
+    if _production and not _secret_key:
+        raise RuntimeError("SECRET_KEY must be configured in production.")
+    SECRET_KEY = _secret_key or "dev-only-secret-key-change-this"
 
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "sqlite:///secure_cloud_storage.db"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Proxy headers must be explicitly trusted. Leaving this disabled is the
-    # safe default for local development and prevents clients from spoofing
-    # their address through X-Forwarded-For.
     TRUST_PROXY_HEADERS = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in {
         "1", "true", "yes", "on"
     }
 
-    # Use PostgreSQL-specific SSL settings only when PostgreSQL is configured.
-    # SQLite does not accept sslmode or connect_timeout.
+    # Flask session cookies: secure in production, HTTP-only everywhere, and
+    # SameSite=Lax to reduce cross-site request abuse while retaining normal
+    # navigation/login behavior.
+    SESSION_COOKIE_SECURE = _production
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_SECURE = _production
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+
+    # Reject oversized request bodies before application code processes them.
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+
     if SQLALCHEMY_DATABASE_URI.startswith(("postgresql://", "postgresql+psycopg2://")):
         SQLALCHEMY_ENGINE_OPTIONS = {
             "poolclass": NullPool,
