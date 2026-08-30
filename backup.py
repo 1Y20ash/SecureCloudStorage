@@ -31,7 +31,6 @@ KEY_SIZE = 32
 
 
 def generate_backup_key() -> str:
-    """Return a URL-safe base64 AES-256 key suitable for BACKUP_ENCRYPTION_KEY."""
     return base64.urlsafe_b64encode(os.urandom(KEY_SIZE)).decode("ascii")
 
 
@@ -57,12 +56,16 @@ def _sha256(path: Path) -> str:
 
 
 def _safe_extract(tar: tarfile.TarFile, destination: Path) -> None:
+    """Extract only regular files/directories beneath destination."""
     root = destination.resolve()
     for member in tar.getmembers():
+        if member.issym() or member.islnk() or member.isdev():
+            raise ValueError(f"Unsupported archive member type: {member.name}")
         target = (destination / member.name).resolve()
         if target != root and root not in target.parents:
             raise ValueError(f"Unsafe archive path: {member.name}")
-    tar.extractall(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    tar.extractall(destination, filter="data")
 
 
 def _sqlite_backup(source: Path, destination: Path) -> None:
@@ -79,9 +82,7 @@ def _postgres_dump(database_url: str, destination: Path) -> None:
     try:
         subprocess.run(
             ["pg_dump", "--format=custom", "--no-owner", "--file", str(destination), database_url],
-            check=True,
-            capture_output=True,
-            text=True,
+            check=True, capture_output=True, text=True,
         )
     except FileNotFoundError as exc:
         raise RuntimeError("pg_dump is required for PostgreSQL backups on this host.") from exc
@@ -93,9 +94,7 @@ def _postgres_restore(database_url: str, dump_path: Path) -> None:
     try:
         subprocess.run(
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "--dbname", database_url, str(dump_path)],
-            check=True,
-            capture_output=True,
-            text=True,
+            check=True, capture_output=True, text=True,
         )
     except FileNotFoundError as exc:
         raise RuntimeError("pg_restore is required for PostgreSQL restoration on this host.") from exc
@@ -119,7 +118,7 @@ def _sqlite_path(database_url: str, app_root: Path | None = None) -> Path:
 
 
 def create_backup(output_path: str | Path, database_url: str, encrypted_files_dir: str | Path | None = None, key: str | None = None) -> Path:
-    """Create an encrypted .scsb backup and return its path."""
+    """Create an authenticated encrypted .scsb backup."""
     destination = Path(output_path).resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     temp_root = Path(tempfile.mkdtemp(prefix="scs-backup-"))
@@ -184,7 +183,7 @@ def create_backup(output_path: str | Path, database_url: str, encrypted_files_di
 
 
 def restore_backup(backup_path: str | Path, database_url: str, encrypted_files_dir: str | Path | None = None, key: str | None = None, restore_files: bool = True) -> dict:
-    """Verify and restore an encrypted backup. Returns the verified manifest."""
+    """Verify and restore an authenticated encrypted backup."""
     source = Path(backup_path).resolve()
     raw = source.read_bytes()
     if not raw.startswith(MAGIC) or len(raw) <= len(MAGIC) + NONCE_SIZE:
@@ -197,18 +196,24 @@ def restore_backup(backup_path: str | Path, database_url: str, encrypted_files_d
     try:
         tar_path = temp_root / "payload.tar.gz"
         tar_path.write_bytes(plaintext)
-        with tarfile.open(tar_path, "r:gz") as tar:
-            _safe_extract(tar, temp_root / "payload")
-
         payload = temp_root / "payload"
+        with tarfile.open(tar_path, "r:gz") as tar:
+            _safe_extract(tar, payload)
+
         manifest = json.loads((payload / "manifest.json").read_text(encoding="utf-8"))
-        db_file = payload / manifest["database_file"]
+        if manifest.get("format") != 1:
+            raise ValueError("Unsupported backup format.")
+        db_file = (payload / manifest["database_file"]).resolve()
+        if payload.resolve() not in db_file.parents:
+            raise ValueError("Unsafe database path in backup manifest.")
         if _sha256(db_file) != manifest["database_sha256"]:
             raise ValueError("Backup database integrity verification failed.")
 
         for item in manifest.get("files", []):
-            file_path = payload / item["path"]
-            if not file_path.is_file() or _sha256(file_path) != item["sha256"]:
+            file_path = (payload / item["path"]).resolve()
+            if payload.resolve() not in file_path.parents or not file_path.is_file():
+                raise ValueError(f"Invalid backup file path: {item['path']}")
+            if _sha256(file_path) != item["sha256"]:
                 raise ValueError(f"Backup file integrity verification failed: {item['path']}")
 
         target_scheme = _database_scheme(database_url)
@@ -230,7 +235,7 @@ def restore_backup(backup_path: str | Path, database_url: str, encrypted_files_d
             for item in manifest.get("files", []):
                 relative = Path(item["path"]).relative_to("encrypted_files")
                 destination = (target_dir / relative).resolve()
-                if target_dir not in destination.parents and destination != target_dir:
+                if target_dir != destination and target_dir not in destination.parents:
                     raise ValueError("Unsafe restore path")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(payload / item["path"], destination)
