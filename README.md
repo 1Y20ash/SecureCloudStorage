@@ -1,4 +1,4 @@
-# 🔐 SecureCloudStorage — PS-26190 Secure Digital Document Management System
+# 🔐 SecureCloudStorage — Secure Digital Document Management System
 
 SecureCloudStorage has evolved from a privacy-first encrypted cloud-storage application into a **case-centric Secure Digital Document Management System (DMS)** for legal and investigation-document workflows, developed against **Problem Statement PS 26190**.
 
