@@ -9,7 +9,7 @@ from flask_login import current_user
 ROLE_PERMISSIONS = {
     "Admin": {"manage_cases", "manage_assignments", "upload", "download", "review"},
     "Investigating Officer": {"manage_cases", "manage_assignments", "upload", "download", "review"},
-    "Police Officer": {"manage_cases", "manage_assignments", "upload", "download", "review"},
+    "Police Officer": {"manage_cases", "upload", "download", "review"},
     "Legal Officer": {"review", "upload", "download"},
     "Forensic Officer": {"review", "upload", "download"},
     "Authority": {"review"},
@@ -94,8 +94,8 @@ def can_access_case(user, case):
 
 def role_can_access_category(user, category):
     allowed_categories = ROLE_DOCUMENT_CATEGORIES.get(user.role)
-    # Legacy/test records without category metadata must retain existing
-    # authorization semantics; specialist restrictions apply when metadata exists.
+    # Legacy/test records without category metadata retain existing semantics;
+    # specialist restrictions apply whenever category metadata is present.
     return allowed_categories is None or category is None or category in allowed_categories
 
 
