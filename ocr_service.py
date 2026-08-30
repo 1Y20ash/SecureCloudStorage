@@ -32,9 +32,19 @@ def _tesseract_executable() -> str:
     executable = os.getenv("TESSERACT_CMD") or shutil.which("tesseract")
     if not executable:
         raise OCRUnavailableError(
-            "Tesseract is not installed or TESSERACT_CMD is not configured."
+            "Local OCR is unavailable on this deployment because Tesseract is not installed. "
+            "Run SecureCloudStorage locally on a machine with Tesseract installed to use OCR."
         )
     return executable
+
+
+def is_ocr_available() -> bool:
+    """Return whether a local Tesseract executable can be discovered."""
+    try:
+        _tesseract_executable()
+    except OCRUnavailableError:
+        return False
+    return True
 
 
 def extract_text(document_bytes: bytes, filename: str, language: str = "eng") -> str:
@@ -55,13 +65,18 @@ def extract_text(document_bytes: bytes, filename: str, language: str = "eng") ->
         output_base = os.path.join(temp_dir, "ocr")
         with open(source_path, "wb") as source_file:
             source_file.write(document_bytes)
-        completed = subprocess.run(
-            [executable, source_path, output_base, "-l", language],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                [executable, source_path, output_base, "-l", language],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            raise OCRUnavailableError(
+                "Local OCR could not start or complete because Tesseract is unavailable on this deployment."
+            ) from exc
         if completed.returncode != 0:
             detail = completed.stderr.strip() or "Tesseract returned a non-zero exit code."
             raise OCRUnavailableError(detail)
