@@ -65,7 +65,8 @@ def test_expired_share_is_rejected():
 
 
 def test_naive_expired_share_is_rejected():
-    expired = datetime.now() - timedelta(minutes=1)
+    # Simulate SQLite stripping timezone information from a UTC timestamp.
+    expired = (datetime.now(timezone.utc) - timedelta(minutes=1)).replace(tzinfo=None)
     assert share_is_active(share(2, expires_at=expired)) is False
 
 
