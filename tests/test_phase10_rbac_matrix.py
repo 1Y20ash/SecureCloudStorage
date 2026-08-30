@@ -52,9 +52,12 @@ def test_investigation_roles_can_manage_owned_case(role):
     assert can_manage_case(user(role), case(created_by=1))
 
 
-@pytest.mark.parametrize("role", ["Investigating Officer", "Police Officer"])
-def test_investigation_roles_can_manage_assignments_on_owned_case(role):
-    assert can_manage_case_assignments(user(role), case(created_by=1))
+def test_investigating_officer_can_manage_assignments_on_owned_case():
+    assert can_manage_case_assignments(user("Investigating Officer"), case(created_by=1))
+
+
+def test_police_officer_cannot_manage_case_assignments():
+    assert not can_manage_case_assignments(user("Police Officer"), case(created_by=1))
 
 
 def test_admin_can_manage_any_case():
