@@ -1,147 +1,96 @@
 # SecureCloudStorage — Development Log
 
-This log records the phase-wise development baseline, verification checkpoints, and completion criteria for the SecureCloudStorage project.
+This log records the phase-wise development baseline, verification checkpoints, and completion criteria for the SecureCloudStorage / PS-26190 project.
 
-## Phase 1 — Core Secure Storage
+## Project Baseline
 
-**Status:** Completed.
+The project evolved from the original encrypted cloud-storage application into a case-centric digital document management system for legal and investigation document workflows. The implementation remains an educational/prototype system and does not claim statutory or legal validity.
 
-Implemented the foundational authenticated cloud-storage workflow, user authentication, encrypted file storage, download/decryption, and initial deployment structure.
+## Phase Status
 
-## Phase 2 — RBAC & Secure Sharing
+### Phase 0 — Baseline & Project Governance
+**Status: Completed.**
 
-**Status:** Completed.
+Governance documents, security policy, free-resource policy, migration discipline, `.gitignore`, and the dedicated `feature/ps-26190-dms` development branch were established.
 
-Implemented role-aware access control, case assignments, document sharing, sharing expiry, and authorization tests while preserving the free-only dependency constraint.
+### Phase 1 — Core Document & Case Management
+**Status: Completed and merged into `main`.**
 
-## Phase 3 — Audit Trail & Document Integrity
+Case records, Case IDs, case-document relationships, document categories and metadata, case interfaces, and case-aware upload were implemented while preserving the encrypted storage workflow.
 
-**Status:** Completed and integrated into the main development line.
+### Phase 2 — RBAC & Secure Sharing
+**Status: Completed and merged into `main`.**
 
-Implemented audit logging, document integrity metadata, cryptographic hash tracking, and the evidentiary integrity foundation.
+Deny-by-default authorization, user roles, case assignments, case/document permissions, secure sharing, expiry, and authorization tests were implemented.
 
-## Phase 4 — Document Lifecycle & Versioning
+### Phase 3 — Audit Trail & Document Integrity
+**Status: Completed and merged into `main`.**
 
-**Status:** Completed and integrated into the main development line.
+Audit events, integrity metadata, SHA-256 tracking, integrity-aware downloads, and security regression coverage were implemented.
 
-Implemented document lifecycle controls, version records, chained document hashes, lifecycle transitions, and related migration/test coverage.
+### Phase 4 — Document Lifecycle & Versioning
+**Status: Completed and merged into `main`.**
 
-## Phase 5 — Evidence Management & Chain of Custody
+Document lifecycle controls, version records, chained hashes, lifecycle transitions, and migration/test coverage were implemented.
 
-**Status:** Completed.
+### Phase 5 — Evidence Management & Chain of Custody
+**Status: Completed and merged into `main`.**
 
-Implemented investigation evidence records, controlled evidence lifecycle, custody transfers and receipts, ordered custody-chain retrieval, SHA-256 integrity verification, append-only custody protections, migration `0008_evidence_management`, automated tests, CI coverage, and implementation documentation.
+Evidence records, controlled lifecycle, custody transfers and receipts, ordered chain retrieval, SHA-256 integrity verification, append-only custody protections, migration `0008_evidence_management`, automated tests, CI coverage, and documentation were implemented.
 
-## Phase 6 — Digital Signatures
+### Phase 6 — Digital Signatures
+**Status: Completed and merged into `main`.**
 
-**Status:** Completed and production-verified.
+Ed25519 signing/verification, SHA-256 document hashing, encrypted per-user signing-key storage, immutable signing identity fields, append-only signed records, migration `0009_digital_signatures`, UI routes, automated tests, and the technical-vs-legal distinction were implemented and verified.
 
-### Implemented Scope
-- Ed25519 signing and verification through the existing `cryptography` dependency.
-- SHA-256 document hashing before signing.
-- Per-user signing-key records with encrypted private-key storage.
-- Immutable cryptographic identity fields and append-only signed records.
-- Alembic migration `0009_digital_signatures`.
-- Signing, signed-record listing, detail, and verification UI.
-- Explicit prototype/legal-status boundary in the UI and documentation.
-- Automated cryptographic and UI-route tests.
+### Phase 7 — OCR & Intelligent Document Search
+**Status: Implemented; deployment-specific gates explicitly tracked.**
 
-### Production Verification
-- Supabase PostgreSQL production schema was reconciled with the migration history by stamping the existing baseline as `0001_initial_schema`.
-- Production migrations `0002` through `0009` were applied successfully.
-- Production Alembic revision verified as `0009_digital_signatures`.
-- Deployed application login was retested successfully after the production schema repair.
+Local Tesseract OCR, OCR persistence, source-document SHA-256 binding, authenticated search/OCR routes, metadata/text filters, and negative authorization tests are implemented and merged.
 
-### Phase 6 Completion Criteria
-- [x] Cryptographic signing service.
-- [x] SHA-256 document hashing.
-- [x] Ed25519 signature generation and verification.
-- [x] Signed-record persistence.
-- [x] Signer and timestamp recording.
-- [x] Signature and verification-status recording.
-- [x] Signed-record immutability/append-only protection.
-- [x] Digital-signature UI prototype.
-- [x] Technical-vs-legal distinction documented and displayed.
-- [x] Automated tests.
-- [x] Migration verification.
-- [x] Production login verification.
-- [x] Security/review checkpoint for the production schema repair.
+Remaining deployment-specific gates are:
+- production application/database migration to `0010_ocr_documents`;
+- live production OCR/search verification;
+- confirmation of PDF/scanned-document OCR acceptance if that requirement is retained for the final demonstration.
 
-## Phase 7 — OCR & Intelligent Document Search
+These are not falsely marked complete without direct production verification.
 
-**Status:** Merged into `main`; production migration and live production verification remain pending.
+### Phase 8 — Collaboration & Security Monitoring
+**Status: Implemented and merged into `main`.**
 
-### PDP Scope
-- Preserve the original encrypted document.
-- Extract text locally using free/open-source OCR tooling.
-- Persist OCR text without replacing the original document.
-- Bind OCR output to the source document through SHA-256.
-- Search by filename, case, category, officer, date, metadata, and extracted OCR text.
-- Enforce authentication and case-level authorization.
-- Prefer privacy-conscious local processing; no paid OCR API dependency.
+Case assignment, document sharing, permission management, security-event monitoring, failed-login/unauthorized-access visibility, and security hardening foundations are present in the repository.
 
-### Implemented Phase 7 Scope
-- Local Tesseract OCR service.
-- OCR document model and migration `0010_ocr_documents`.
-- Source-document SHA-256 binding for OCR records.
-- Case-document relationship for OCR records.
-- Authenticated document-search UI and OCR detail route.
-- Filename, case, category, officer, date, and OCR-text search filters.
-- Case-level and document-level authorization enforcement for search/OCR access.
-- Automated OCR service tests and Phase 7 route coverage, including negative authorization coverage.
-- CI workflow updated for Phase 7 test coverage and Python 3.10/3.12 validation.
+Optional items such as MFA or advanced suspicious-activity detection are not required for the core PS-26190 target unless separately accepted.
 
-### Phase 7 Verification Checklist
-- [x] Local/open-source OCR foundation.
-- [x] Original document preservation.
-- [x] Source SHA-256 binding.
-- [x] OCR persistence model and migration.
-- [x] Search UI and authenticated routes.
-- [x] Case-level authorization checks.
-- [x] Document-level authorization checks.
-- [x] Automated OCR tests.
-- [x] Negative authorization testing.
-- [x] Phase 7 route tests.
-- [x] CI workflow configuration.
-- [x] Final Phase 7 CI run verified.
-- [x] Final security review.
-- [x] Pull request review and teammate approval.
-- [x] Merge into `main`.
-- [ ] PDF/scanned-document OCR support, if retained as a Phase 7 acceptance requirement.
-- [ ] Apply migration `0010_ocr_documents` to production.
-- [ ] Production OCR/search verification.
-- [ ] Create/version `v0.8-ocr-search`.
+### Phase 9 — Backup, Reliability & Deployment Hardening
+**Status: Implemented and merged into `main`.**
 
-### Phase 7 Acceptance Note
+Encrypted database/file backup and restore, SHA-256 integrity validation, tamper rejection, malformed-container rejection, key validation, security headers, secure session configuration, input/file validation, and dependency audit/testing were implemented.
 
-The implementation, CI, security review, teammate review, and merge gates are complete. Production migration and live production verification remain explicit deployment gates and are not marked complete without direct verification against the deployment database/application.
+The automated restoration test satisfies the prototype-level PDP restore requirement. A production restore drill remains deployment-specific where external object storage is used.
 
-## Foundation Hardening — PS-26190 Compliance Checkpoint
+### Phase 10 — Final Testing & PS Compliance
+**Status: Implemented and merged into `main`.**
 
-**Status:** In progress on `feature/ps-26190-foundation-hardening`.
+The Phase 10 RBAC matrix and authorization regression suite cover all six PDP roles, case ownership/assignment, specialist document restrictions, Authority review-only behavior, share-bypass prevention, and deny-by-default behavior.
 
-The hardening branch is based directly on the stable `main` baseline and is being used to bring security, correctness, reliability, and UI behavior into alignment with the PDP before the next feature phase is accepted.
+Latest CI validation on the final main baseline passed for the repository test workflow and dependency audit workflow.
 
-### Implemented in this checkpoint
-- Phase 3 Flask integrity/audit hooks are explicitly registered during application initialization.
-- Encrypted storage SHA-256 is persisted at upload/version creation instead of relying on a later request hook.
-- Integrity-blocked download attempts are audited as failed download events and integrity failures are recorded separately.
-- Failed authentication attempts are distinguishable from successful login audit events.
-- Proxy forwarding headers are opt-in rather than blindly trusted.
-- Production requires an explicit `SECRET_KEY` and uses hardened session-cookie settings.
-- Baseline HTTP security headers are applied without changing the existing visual theme.
-- Case-detail management controls are rendered according to the same authorization decisions enforced by the backend.
-- The Decrypt & Download UI remains password-first; a GET request never attempts decryption.
-- Regression coverage was added for Phase 3 hook registration and idempotence.
+## Final Compliance Checkpoint
 
-### Remaining foundation gates
-- [ ] Execute the complete automated test suite on the hardening branch.
-- [ ] Add/verify negative tests for unauthorized access, tampered storage, invalid uploads, expired shares, and failed authentication.
-- [ ] Reconcile Phase 0–8 documentation and release/version tags with actual repository state.
-- [ ] Verify production OCR migration and live OCR/search behavior.
-- [ ] Implement and test the PDP-required backup and restore workflow.
-- [ ] Perform final UI regression testing across desktop/mobile flows.
+The repository is now in final-compliance/release preparation. The implementation is substantially complete, but the following evidence boundaries remain explicit:
 
-## Current Next Step
+- Production OCR migration/live OCR verification are not claimed without direct deployment verification.
+- Production external-object-storage backup/restore drill is not claimed without direct deployment verification.
+- Final UI/demo evidence must be recorded from an actual demonstration rather than inferred from source code.
+- The project does not claim statutory/legal validity for its digital-signature prototype.
 
-Finish foundation hardening and its regression/security gates before beginning any new advanced feature. Phase 9 backup/recovery must be implemented and restoration-tested before the project can claim the PDP's hardened milestone.
+The final PS-26190 requirement-to-implementation/test/demo mapping is maintained in `docs/PS26190_COMPLIANCE_MATRIX.md`.
+
+## Release Gate
+
+The final release target is `v1.1-ps-26190-final`. It must be created only after the final compliance branch has passed CI and has been merged into `main`.
+
+## Current Principle
+
+Build → Test → Review → Secure → Document → Merge → Tag → Demonstrate.
