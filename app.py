@@ -524,6 +524,9 @@ register_phase6_ui(app)
 from phase7_ui import register_phase7_ui
 register_phase7_ui(app)
 
+from security_monitoring import register_security_monitoring
+register_security_monitoring(app)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

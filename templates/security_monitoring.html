@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2>Security Monitoring</h2>
+      <p class="text-muted mb-0">Administrative view of security events and integrity failures.</p>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Events · 24h</div><div class="display-6">{{ summary.total_events }}</div></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Failed events · 24h</div><div class="display-6">{{ summary.failed_events }}</div></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Integrity failures · 24h</div><div class="display-6">{{ summary.integrity_failures }}</div></div></div></div>
+  </div>
+  <div class="card"><div class="card-body">
+    <h5 class="card-title">Recent security events</h5>
+    <div class="table-responsive"><table class="table table-sm align-middle">
+      <thead><tr><th>Time</th><th>Action</th><th>User</th><th>IP</th><th>Result</th><th>Details</th></tr></thead>
+      <tbody>
+      {% for event in events %}
+        <tr><td>{{ event.created_at }}</td><td>{{ event.action }}</td><td>{{ event.user_id or 'Anonymous' }}</td><td>{{ event.ip_address or '—' }}</td><td>{% if event.success %}<span class="badge bg-success">Success</span>{% else %}<span class="badge bg-danger">Failed</span>{% endif %}</td><td>{{ event.details or '—' }}</td></tr>
+      {% else %}<tr><td colspan="6" class="text-muted">No security events recorded yet.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div></div>
+</div>
+{% endblock %}
