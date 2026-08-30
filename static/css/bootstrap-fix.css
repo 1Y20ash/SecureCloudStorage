@@ -1,12 +1,5 @@
 /* Bootstrap compatibility layer for SecureVault custom design */
-/* Loaded after style.css so Bootstrap's responsive behavior is not overridden by legacy custom rules. */
-
-html {
-  zoom: 1;
-  -moz-transform: none;
-  transform: none;
-  transform-origin: initial;
-}
+/* Loaded after style.css to keep Bootstrap's responsive behavior compatible with SecureVault. */
 
 /* Keep Bootstrap's container responsive while preserving SecureVault's desktop width. */
 .container {
