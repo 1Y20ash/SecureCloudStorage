@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}DMS Dashboard — SecureVault{% endblock %}
 {% block content %}
-<div class="container-fluid px-0 py-4">
+<div class="dashboard-page container-fluid px-0 py-4">
   <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
     <div><span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · DMS</span><h1 id="dynamic-greeting" class="display-5 fw-semibold mb-2" data-username="{{ current_user.name.split(' ')[0] }}">Good afternoon, {{ current_user.name.split(' ')[0] }}.</h1><p class="lead text-secondary mb-0">Your secure workspace for cases and encrypted investigation documents.</p></div>
-    <div class="d-flex gap-2"><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">+ New Case</a><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Upload Document ↑</a></div>
+    <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-success rounded-3" href="{{ url_for('create_case') }}">+ New Case</a><a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Upload Document ↑</a><a class="btn btn-outline-success rounded-3" href="{{ url_for('phase7_ui.document_search') }}">Search Documents 🔎</a></div>
   </div>
 
   <div class="row g-3 mb-4">
@@ -23,14 +23,14 @@
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
     <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Shared With Me</h2><p class="text-secondary mb-0">Documents explicitly shared with your account.</p></div>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">Document</th><th>Case</th><th>Category</th><th class="text-end pe-4">Action</th></tr></thead><tbody>
-    {% for document in shared_documents %}<tr><td class="ps-4 fw-medium">{{ document.stored_file.original_filename }}</td><td>{{ document.case.case_number }}</td><td>{{ document.category }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success" href="{{ url_for('download', file_id=document.stored_file.id) }}">Open →</a></td></tr>{% endfor %}
+    {% for document in shared_documents %}<tr><td class="ps-4 fw-medium">{{ document.stored_file.original_filename }}</td><td>{{ document.case.case_number }}</td><td>{{ document.category }}</td><td class="text-end pe-4"><a class="btn btn-sm btn-outline-success decrypt-download-trigger" href="{{ url_for('download', file_id=document.stored_file.id) }}" data-download-url="{{ url_for('download', file_id=document.stored_file.id) }}" data-document-name="{{ document.stored_file.original_filename }}">Decrypt & Download →</a></td></tr>{% endfor %}
     </tbody></table></div>
   </div>
   {% endif %}
 
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="card-header bg-white border-0 p-4"><h2 class="h3 mb-1">Encrypted Documents</h2><p class="text-secondary mb-0">Documents owned by your account.</p></div>
-    {% if files %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">File Name</th><th>Size</th><th>Protected On</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead><tbody>{% for file in files %}<tr><td class="ps-4 fw-medium">{{ file.original_filename }}</td><td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td><td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td><td><span class="badge rounded-pill text-bg-success">Encrypted</span></td><td class="pe-4 text-end"><a class="btn btn-sm btn-outline-success" href="{{ url_for('download', file_id=file.id) }}">Download →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">No encrypted documents yet.</p></div>{% endif %}
+    {% if files %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-4">File Name</th><th>Size</th><th>Protected On</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead><tbody>{% for file in files %}<tr><td class="ps-4 fw-medium">{{ file.original_filename }}</td><td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td><td>{{ file.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td><td><span class="badge rounded-pill text-bg-success">Encrypted</span></td><td class="pe-4 text-end"><a class="btn btn-sm btn-outline-success decrypt-download-trigger" href="{{ url_for('download', file_id=file.id) }}" data-download-url="{{ url_for('download', file_id=file.id) }}" data-document-name="{{ file.original_filename }}">Decrypt & Download →</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="card-body text-center py-4"><p class="text-secondary mb-0">No encrypted documents yet.</p></div>{% endif %}
   </div>
 </div>
 {% endblock %}

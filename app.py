@@ -111,6 +111,7 @@ def parse_expiry(value):
     except ValueError:
         return None
 
+
 def calculate_sha256(file_bytes):
     return hashlib.sha256(file_bytes).hexdigest()
 
@@ -119,7 +120,7 @@ def calculate_sha256(file_bytes):
 def home():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    return render_template("home.html")
+    return render_template("index.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -130,26 +131,17 @@ def register():
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
         if not name or not email or not password:
             flash("All fields are required.", "error")
             return render_template("register.html")
-        if password != confirm_password:
-            flash("Passwords do not match.", "error")
-            return render_template("register.html")
-        if len(password) < 8:
-            flash("Password must contain at least 8 characters.", "error")
+        if db.session.scalar(db.select(User).where(User.email == email)):
+            flash("An account with that email already exists.", "error")
             return render_template("register.html")
         user = User(name=name, email=email)
         user.set_password(password)
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            flash("An account with this email already exists.", "error")
-            return render_template("register.html")
-        flash("Registration successful. Please log in.", "success")
+        db.session.add(user)
+        db.session.commit()
+        flash("Account created successfully. You can now sign in.", "success")
         return redirect(url_for("login"))
     return render_template("register.html")
 
@@ -164,6 +156,7 @@ def login():
         user = db.session.scalar(db.select(User).where(User.email == email))
         if user and user.check_password(password):
             login_user(user)
+            flash("Welcome back.", "success")
             return redirect(url_for("dashboard"))
         flash("Invalid email or password.", "error")
     return render_template("login.html")
@@ -172,59 +165,45 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    if is_admin(current_user):
-        cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
-        files = db.session.scalars(db.select(StoredFile).order_by(StoredFile.uploaded_at.desc())).all()
-    else:
-        cases = db.session.scalars(
-            db.select(Case)
-            .where(or_(
-                Case.created_by == current_user.id,
-                Case.assignments.any(CaseAssignment.user_id == current_user.id),
-            ))
-            .order_by(Case.created_at.desc())
-        ).all()
-        files = db.session.scalars(
-            db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
-        ).all()
-    now = datetime.now(timezone.utc)
-    shared_documents = db.session.scalars(
-        db.select(CaseDocument)
-        .join(DocumentShare, DocumentShare.case_document_id == CaseDocument.id)
-        .where(
-            DocumentShare.shared_with_user_id == current_user.id,
-            or_(DocumentShare.expires_at.is_(None), DocumentShare.expires_at > now),
-        )
-        .order_by(CaseDocument.created_at.desc())
+    cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
+    cases = [case for case in cases if can_access_case(current_user, case)]
+    files = db.session.scalars(
+        db.select(StoredFile).where(StoredFile.user_id == current_user.id).order_by(StoredFile.uploaded_at.desc())
     ).all()
-    return render_template("dashboard.html", files=files, cases=cases, shared_documents=shared_documents)
+    shared_documents = db.session.scalars(
+        db.select(CaseDocument).join(DocumentShare, DocumentShare.case_document_id == CaseDocument.id).where(
+            DocumentShare.shared_with_user_id == current_user.id,
+        ).order_by(CaseDocument.created_at.desc())
+    ).all()
+    return render_template("dashboard.html", cases=cases, files=files, shared_documents=shared_documents)
 
 
 @app.route("/cases/new", methods=["GET", "POST"])
 @login_required
 def create_case():
     if request.method == "POST":
-        case_number = request.form.get("case_number", "").strip()
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
         department = request.form.get("department", "").strip()
         status = request.form.get("status", "Open")
-        if not case_number or not title:
-            flash("Case number and title are required.", "error")
+        if not title:
+            flash("Case title is required.", "error")
             return render_template("case_form.html", statuses=CASE_STATUSES)
         if status not in CASE_STATUSES:
             flash("Invalid case status.", "error")
             return render_template("case_form.html", statuses=CASE_STATUSES)
-        case = Case(case_number=case_number, title=title, description=description,
-                    department=department, status=status, created_by=current_user.id)
-        try:
-            db.session.add(case)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            flash("A case with this Case ID already exists.", "error")
-            return render_template("case_form.html", statuses=CASE_STATUSES)
-        flash("Case created successfully.", "success")
+        case_count = db.session.scalar(db.select(db.func.count(Case.id))) or 0
+        case = Case(
+            case_number=f"CASE-{datetime.now(timezone.utc).year}-{case_count + 1:03d}",
+            title=title,
+            description=description or None,
+            department=department or None,
+            status=status,
+            created_by=current_user.id,
+        )
+        db.session.add(case)
+        db.session.commit()
+        flash(f"{case.case_number} created successfully.", "success")
         return redirect(url_for("case_detail", case_id=case.id))
     return render_template("case_form.html", statuses=CASE_STATUSES)
 
@@ -233,47 +212,40 @@ def create_case():
 @login_required
 def case_detail(case_id):
     case = db.session.get(Case, case_id)
-    if not can_access_case(current_user, case):
+    if case is None or not can_access_case(current_user, case):
         flash("Case not found or access denied.", "error")
         return redirect(url_for("dashboard"))
     return render_template(
         "case_detail.html",
         case=case,
+        categories=DOCUMENT_CATEGORIES,
         can_manage=can_manage_case(current_user, case),
+        can_manage_assignments=can_manage_case_assignments(current_user, case),
     )
 
 
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
-    if is_admin(current_user):
-        cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
-    else:
-        cases = db.session.scalars(
-            db.select(Case)
-            .where(or_(
-                Case.created_by == current_user.id,
-                Case.assignments.any(CaseAssignment.user_id == current_user.id),
-            ))
-            .order_by(Case.created_at.desc())
-        ).all()
+    cases = db.session.scalars(db.select(Case).order_by(Case.created_at.desc())).all()
+    cases = [case for case in cases if can_access_case(current_user, case)]
     if request.method == "POST":
         uploaded_file = request.files.get("file")
-        encryption_password = request.form.get("encryption_password", "")
         case_id = request.form.get("case_id", type=int)
-        category = request.form.get("category", "Other")
+        category = request.form.get("category", "").strip()
+        encryption_password = request.form.get("encryption_password", "")
+        case = db.session.get(Case, case_id) if case_id else None
+        if case is None or not can_manage_case(current_user, case):
+            flash("You are not authorized to upload to the selected case.", "error")
+            return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
         if not uploaded_file or not uploaded_file.filename:
             flash("Please select a file.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
+        if category not in DOCUMENT_CATEGORIES:
+            flash("Please select a valid document category.", "error")
+            return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
         if not encryption_password:
             flash("An encryption password is required.", "error")
-            return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
-        case = db.session.get(Case, case_id) if case_id else None
-        if not can_access_case(current_user, case):
-            flash("You are not authorized to upload to this case.", "error")
-            return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
-        if category not in DOCUMENT_CATEGORIES:
-            flash("Invalid document category.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
         original_filename = secure_filename(uploaded_file.filename)
         if not original_filename:
@@ -291,12 +263,13 @@ def upload():
             store_encrypted_file(encrypted_filename, encrypted_data)
             storage_uploaded = True
             stored_file = StoredFile(
-                                        user_id=current_user.id,
-                                        original_filename=original_filename,
-                                        encrypted_filename=encrypted_filename,
-                                        file_size=len(file_bytes),
-                                        sha256_hash=sha256_hash,
-                                    )
+                user_id=current_user.id,
+                original_filename=original_filename,
+                encrypted_filename=encrypted_filename,
+                file_size=len(file_bytes),
+                sha256_hash=sha256_hash,
+                encrypted_sha256_hash=calculate_sha256(encrypted_data),
+            )
             db.session.add(stored_file)
             db.session.flush()
             case_document = CaseDocument(
@@ -306,31 +279,10 @@ def upload():
                 version=1,
                 status="Draft",
             )
-
             db.session.add(case_document)
             db.session.flush()
-
-            db.session.add(
-                DocumentVersion(
-                    case_document_id=case_document.id,
-                    version=1,
-                    stored_file_id=stored_file.id,
-                    sha256_hash=sha256_hash,
-                    previous_hash=None,
-                    created_by=current_user.id,
-                )
-            )
-
-            db.session.add(
-                EvidenceCustody(
-                    case_document_id=case_document.id,
-                    action="ACQUIRED",
-                    actor_user_id=current_user.id,
-                    sha256_hash=sha256_hash,
-                    notes="Initial evidence upload",
-                )
-            )
-
+            db.session.add(DocumentVersion(case_document_id=case_document.id, version=1, stored_file_id=stored_file.id, sha256_hash=sha256_hash, previous_hash=None, created_by=current_user.id))
+            db.session.add(EvidenceCustody(case_document_id=case_document.id, action="ACQUIRED", actor_user_id=current_user.id, sha256_hash=sha256_hash, notes="Initial evidence upload"))
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -346,166 +298,102 @@ def upload():
     return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
 
 
+@app.route("/documents/<int:file_id>/download", methods=["GET", "POST"])
+@login_required
+def download(file_id):
+    stored_file = db.session.get(StoredFile, file_id)
+    if stored_file is None:
+        flash("File not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    document = db.session.scalar(
+        db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id)
+    )
+    if document is None or not can_download_document(current_user, document):
+        flash("You are not authorized to download this document.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "GET":
+        return redirect(url_for("case_detail", case_id=document.case_id))
+
+    password = request.form.get("password", "")
+    if not password:
+        flash("A document password is required.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+
+    try:
+        decrypted = decrypt_file(
+            read_encrypted_file(stored_file.encrypted_filename),
+            password,
+        )
+    except InvalidTag:
+        flash("Incorrect encryption password.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+    except ValueError:
+        flash("The encrypted file format is invalid or corrupted.", "error")
+        return redirect(url_for("case_detail", case_id=document.case_id))
+
+    return send_file(
+        io.BytesIO(decrypted),
+        as_attachment=True,
+        download_name=stored_file.original_filename,
+    )
+
+
 @app.route("/documents/<int:document_id>/versions", methods=["POST"])
 @login_required
 def create_document_version(document_id):
     document = db.session.get(CaseDocument, document_id)
-
     if document is None or not can_access_case(current_user, document.case):
         flash("Document not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-
     if not can_manage_case(current_user, document.case):
         flash("You are not authorized to create a new document version.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     uploaded_file = request.files.get("file")
     encryption_password = request.form.get("encryption_password", "")
-
     if not uploaded_file or not uploaded_file.filename:
         flash("Please select a file.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     if not encryption_password:
         flash("An encryption password is required.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     original_filename = secure_filename(uploaded_file.filename)
-
     if not original_filename:
         flash("The selected filename is invalid.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     file_bytes = uploaded_file.read(MAX_FILE_SIZE + 1)
-
     if len(file_bytes) > MAX_FILE_SIZE:
         flash("File size must be 10 MB or less.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     sha256_hash = calculate_sha256(file_bytes)
     encrypted_data = encrypt_file(file_bytes, encryption_password)
     encrypted_filename = f"{secrets.token_hex(16)}.enc"
-
     next_version = get_next_version(document.id)
     previous_hash = get_previous_hash(document.id)
-
     storage_uploaded = False
-
     try:
         store_encrypted_file(encrypted_filename, encrypted_data)
         storage_uploaded = True
-
-        stored_file = StoredFile(
-            user_id=current_user.id,
-            original_filename=original_filename,
-            encrypted_filename=encrypted_filename,
-            file_size=len(file_bytes),
-            sha256_hash=sha256_hash,
-        )
-
+        stored_file = StoredFile(user_id=current_user.id, original_filename=original_filename, encrypted_filename=encrypted_filename, file_size=len(file_bytes), sha256_hash=sha256_hash, encrypted_sha256_hash=calculate_sha256(encrypted_data))
         db.session.add(stored_file)
         db.session.flush()
-
-        db.session.add(
-            DocumentVersion(
-                case_document_id=document.id,
-                version=next_version,
-                stored_file_id=stored_file.id,
-                sha256_hash=sha256_hash,
-                previous_hash=previous_hash,
-                created_by=current_user.id,
-            )
-        )
-
+        db.session.add(DocumentVersion(case_document_id=document.id, version=next_version, stored_file_id=stored_file.id, sha256_hash=sha256_hash, previous_hash=previous_hash, created_by=current_user.id))
         document.stored_file_id = stored_file.id
         document.version = next_version
-
-        db.session.add(
-            EvidenceCustody(
-                case_document_id=document.id,
-                action="VERSION_CREATED",
-                actor_user_id=current_user.id,
-                sha256_hash=sha256_hash,
-                notes=f"Created document version {next_version}",
-            )
-        )
-
+        db.session.add(EvidenceCustody(case_document_id=document.id, action="VERSION_CREATED", actor_user_id=current_user.id, sha256_hash=sha256_hash, notes=f"Created document version {next_version}"))
         db.session.commit()
-
     except Exception:
         db.session.rollback()
-
         if storage_uploaded:
             try:
                 delete_encrypted_file(encrypted_filename)
             except Exception:
                 pass
-
-        flash("The new document version could not be created.", "error")
+        flash("The new document version could not be saved.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
-    flash(
-        f"Document version {next_version} created successfully.",
-        "success",
-    )
-
+    flash(f"Document version {next_version} created successfully.", "success")
     return redirect(url_for("case_detail", case_id=document.case_id))
-@app.route("/download/<int:file_id>", methods=["GET", "POST"])
-@login_required
-
-def download(file_id):
-    stored_file = db.session.get(StoredFile, file_id)
-    case_document = stored_file.case_document if stored_file else None
-    if not can_download_document(current_user, case_document):
-        flash("File not found or download access denied.", "error")
-        return redirect(url_for("dashboard"))
-    if request.method == "GET":
-        return render_template("download.html", file=stored_file)
-    decryption_password = request.form.get("decryption_password", "")
-    if not decryption_password:
-        flash("Please enter the decryption password.", "error")
-        return render_template("download.html", file=stored_file)
-    try:
-        encrypted_data = read_encrypted_file(stored_file.encrypted_filename)
-        decrypted_data = decrypt_file(encrypted_data, decryption_password)
-    except FileNotFoundError:
-        flash("The encrypted file is missing from storage.", "error")
-        return redirect(url_for("dashboard"))
-    except InvalidTag:
-        flash("Incorrect password or corrupted file. Decryption failed.", "error")
-        return render_template("download.html", file=stored_file)
-    except (ValueError, OSError):
-        flash("The file could not be decrypted.", "error")
-        return render_template("download.html", file=stored_file)
-    return send_file(io.BytesIO(decrypted_data), as_attachment=True,
-                     download_name=stored_file.original_filename, mimetype="application/octet-stream")
-
-
-@app.route("/delete/<int:file_id>", methods=["POST"])
-@login_required
-def delete_file(file_id):
-    stored_file = db.session.get(StoredFile, file_id)
-    case_document = stored_file.case_document if stored_file else None
-    if stored_file is None or case_document is None:
-        flash("File not found.", "error")
-        return redirect(url_for("dashboard"))
-    case = case_document.case
-    if not can_manage_case(current_user, case):
-        flash("You are not authorized to delete this document.", "error")
-        return redirect(url_for("dashboard"))
-    try:
-        delete_encrypted_file(stored_file.encrypted_filename)
-        filename = stored_file.original_filename
-        db.session.delete(stored_file)
-        db.session.commit()
-        flash(f"{filename} was deleted successfully.", "success")
-    except OSError:
-        db.session.rollback()
-        flash("The encrypted file could not be deleted from storage.", "error")
-    except Exception:
-        db.session.rollback()
-        flash("The file could not be deleted.", "error")
-    return redirect(url_for("dashboard"))
 
 
 @app.route("/documents/<int:document_id>/share", methods=["POST"])
@@ -530,25 +418,14 @@ def share_document(document_id):
     if expires_at and expires_at <= datetime.now(timezone.utc):
         flash("Sharing expiry must be in the future.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-    existing = db.session.scalar(db.select(DocumentShare).where(
-        DocumentShare.case_document_id == document.id,
-        DocumentShare.shared_with_user_id == user.id,
-    ))
+    existing = db.session.scalar(db.select(DocumentShare).where(DocumentShare.case_document_id == document.id, DocumentShare.shared_with_user_id == user.id))
     if existing:
         existing.can_view = True
         existing.can_download = request.form.get("can_download") == "on"
         existing.expires_at = expires_at
         existing.shared_by_user_id = current_user.id
     else:
-        db.session.add(DocumentShare(
-            case_document_id=document.id,
-            shared_with_user_id=user.id,
-            shared_by_user_id=current_user.id,
-            can_view=True,
-            can_download=request.form.get("can_download") == "on",
-            can_manage=False,
-            expires_at=expires_at,
-        ))
+        db.session.add(DocumentShare(case_document_id=document.id, shared_with_user_id=user.id, shared_by_user_id=current_user.id, can_view=True, can_download=request.form.get("can_download") == "on", can_manage=False, expires_at=expires_at))
     try:
         db.session.commit()
     except IntegrityError:
@@ -583,7 +460,6 @@ def manage_case_assignments(case_id):
     if not can_manage_case_assignments(current_user, case):
         flash("You are not authorized to manage case assignments.", "error")
         return redirect(url_for("dashboard"))
-
     if request.method == "POST":
         user_id = request.form.get("user_id", type=int)
         user = db.session.get(User, user_id) if user_id else None
@@ -596,10 +472,7 @@ def manage_case_assignments(case_id):
         if user.role == "Admin" and not is_admin(current_user):
             flash("Only an Admin can assign an Admin account to a case.", "error")
             return redirect(url_for("manage_case_assignments", case_id=case.id))
-        existing = db.session.scalar(db.select(CaseAssignment).where(
-            CaseAssignment.case_id == case.id,
-            CaseAssignment.user_id == user.id,
-        ))
+        existing = db.session.scalar(db.select(CaseAssignment).where(CaseAssignment.case_id == case.id, CaseAssignment.user_id == user.id))
         if existing:
             flash("That user is already assigned to this case.", "error")
             return redirect(url_for("manage_case_assignments", case_id=case.id))
@@ -612,18 +485,9 @@ def manage_case_assignments(case_id):
             return redirect(url_for("manage_case_assignments", case_id=case.id))
         flash(f"{user.name} was assigned to {case.case_number}.", "success")
         return redirect(url_for("manage_case_assignments", case_id=case.id))
-
     assigned_ids = {assignment.user_id for assignment in case.assignments}
-    available_users = db.session.scalars(
-        db.select(User).where(User.id != case.created_by).order_by(User.name.asc())
-    ).all()
-    return render_template(
-        "case_assignments.html",
-        case=case,
-        assignments=case.assignments,
-        available_users=available_users,
-        assigned_ids=assigned_ids,
-    )
+    available_users = db.session.scalars(db.select(User).where(User.id != case.created_by).order_by(User.name.asc())).all()
+    return render_template("case_assignments.html", case=case, assignments=case.assignments, available_users=available_users, assigned_ids=assigned_ids)
 
 
 @app.route("/cases/<int:case_id>/assignments/<int:assignment_id>/remove", methods=["POST"])
@@ -679,6 +543,15 @@ def logout():
 
 from phase5_ui import register_phase5_ui
 register_phase5_ui(app)
+
+from phase6_ui import register_phase6_ui
+register_phase6_ui(app)
+
+from phase7_ui import register_phase7_ui
+register_phase7_ui(app)
+
+from security_monitoring import register_security_monitoring
+register_security_monitoring(app)
 
 
 if __name__ == "__main__":

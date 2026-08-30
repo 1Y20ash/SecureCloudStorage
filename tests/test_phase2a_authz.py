@@ -64,5 +64,11 @@ def test_expired_share_is_rejected():
     assert can_download_document(user(2), doc) is False
 
 
+def test_naive_expired_share_is_rejected():
+    # Simulate SQLite stripping timezone information from a UTC timestamp.
+    expired = (datetime.now(timezone.utc) - timedelta(minutes=1)).replace(tzinfo=None)
+    assert share_is_active(share(2, expires_at=expired)) is False
+
+
 def test_admin_can_download_any_case_document():
     assert can_download_document(user(9, "Admin"), document(1)) is True

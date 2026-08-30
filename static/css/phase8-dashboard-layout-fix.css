@@ -1,0 +1,49 @@
+/* SecureVault dashboard layout normalization.
+   Scoped to dashboard layout so phase-specific CSS does not mutate global rendering. */
+/* The shared shell owns the outer page container; let the dashboard use the full shell width. */
+main.container {
+  width: 100% !important;
+  max-width: 1080px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.dashboard-page {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.dashboard-page .row {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.dashboard-page .card {
+  min-width: 0;
+}
+
+.dashboard-page .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dashboard-page table {
+  min-width: 720px;
+}
+
+@media (max-width: 767.98px) {
+  main.container {
+    max-width: 100% !important;
+  }
+
+  .dashboard-page {
+    padding-top: 24px !important;
+  }
+
+  .dashboard-page table {
+    min-width: 640px;
+  }
+}

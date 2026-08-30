@@ -3,9 +3,11 @@ from unittest.mock import patch
 import pytest
 
 from ocr_service import (
+    OCRUnavailableError,
     OCRUnsupportedFormatError,
     calculate_source_hash,
     extract_text,
+    is_ocr_available,
 )
 
 
@@ -17,6 +19,11 @@ def test_source_hash_is_deterministic():
 def test_ocr_rejects_unsupported_format_before_engine_lookup():
     with pytest.raises(OCRUnsupportedFormatError):
         extract_text(b"not an image", "report.pdf")
+
+
+def test_ocr_reports_unavailable_engine():
+    with patch("ocr_service._tesseract_executable", side_effect=OCRUnavailableError("unavailable")):
+        assert is_ocr_available() is False
 
 
 def test_tesseract_is_invoked_locally_and_text_is_returned(tmp_path):

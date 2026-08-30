@@ -44,9 +44,6 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 90px;
-  zoom: 1.25;
-  -moz-transform: scale(1.25);
-  -moz-transform-origin: 0 0;
 }
 
 section[id], div[id], [id] {

@@ -69,7 +69,7 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 
 ## Phase 7 — OCR & Intelligent Document Search
 
-**Status:** Implemented on `feature/phase7-ocr-document-search`; final merge and production deployment remain pending.
+**Status:** Merged into `main`; production migration and live production verification remain pending.
 
 ### PDP Scope
 - Preserve the original encrypted document.
@@ -87,8 +87,8 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 - Case-document relationship for OCR records.
 - Authenticated document-search UI and OCR detail route.
 - Filename, case, category, officer, date, and OCR-text search filters.
-- Case-level authorization filtering for search and OCR access.
-- Automated OCR service tests and Phase 7 route coverage.
+- Case-level and document-level authorization enforcement for search/OCR access.
+- Automated OCR service tests and Phase 7 route coverage, including negative authorization coverage.
 - CI workflow updated for Phase 7 test coverage and Python 3.10/3.12 validation.
 
 ### Phase 7 Verification Checklist
@@ -98,18 +98,50 @@ Implemented investigation evidence records, controlled evidence lifecycle, custo
 - [x] OCR persistence model and migration.
 - [x] Search UI and authenticated routes.
 - [x] Case-level authorization checks.
+- [x] Document-level authorization checks.
 - [x] Automated OCR tests.
+- [x] Negative authorization testing.
 - [x] Phase 7 route tests.
 - [x] CI workflow configuration.
+- [x] Final Phase 7 CI run verified.
+- [x] Final security review.
+- [x] Pull request review and teammate approval.
+- [x] Merge into `main`.
 - [ ] PDF/scanned-document OCR support, if retained as a Phase 7 acceptance requirement.
-- [ ] Full CI run verified on the final Phase 7 commit.
-- [ ] Final security review.
-- [ ] Pull request review and approval.
-- [ ] Merge into the primary PS-26190 development line.
 - [ ] Apply migration `0010_ocr_documents` to production.
 - [ ] Production OCR/search verification.
 - [ ] Create/version `v0.8-ocr-search`.
 
+### Phase 7 Acceptance Note
+
+The implementation, CI, security review, teammate review, and merge gates are complete. Production migration and live production verification remain explicit deployment gates and are not marked complete without direct verification against the deployment database/application.
+
+## Foundation Hardening — PS-26190 Compliance Checkpoint
+
+**Status:** In progress on `feature/ps-26190-foundation-hardening`.
+
+The hardening branch is based directly on the stable `main` baseline and is being used to bring security, correctness, reliability, and UI behavior into alignment with the PDP before the next feature phase is accepted.
+
+### Implemented in this checkpoint
+- Phase 3 Flask integrity/audit hooks are explicitly registered during application initialization.
+- Encrypted storage SHA-256 is persisted at upload/version creation instead of relying on a later request hook.
+- Integrity-blocked download attempts are audited as failed download events and integrity failures are recorded separately.
+- Failed authentication attempts are distinguishable from successful login audit events.
+- Proxy forwarding headers are opt-in rather than blindly trusted.
+- Production requires an explicit `SECRET_KEY` and uses hardened session-cookie settings.
+- Baseline HTTP security headers are applied without changing the existing visual theme.
+- Case-detail management controls are rendered according to the same authorization decisions enforced by the backend.
+- The Decrypt & Download UI remains password-first; a GET request never attempts decryption.
+- Regression coverage was added for Phase 3 hook registration and idempotence.
+
+### Remaining foundation gates
+- [ ] Execute the complete automated test suite on the hardening branch.
+- [ ] Add/verify negative tests for unauthorized access, tampered storage, invalid uploads, expired shares, and failed authentication.
+- [ ] Reconcile Phase 0–8 documentation and release/version tags with actual repository state.
+- [ ] Verify production OCR migration and live OCR/search behavior.
+- [ ] Implement and test the PDP-required backup and restore workflow.
+- [ ] Perform final UI regression testing across desktop/mobile flows.
+
 ## Current Next Step
 
-Complete the remaining Phase 7 verification items, then create and review the Phase 7 pull request before merging into the primary PS-26190 development line. Migration `0010_ocr_documents` must not be applied to production until the Phase 7 code has been reviewed and the deployment target is ready.
+Finish foundation hardening and its regression/security gates before beginning any new advanced feature. Phase 9 backup/recovery must be implemented and restoration-tested before the project can claim the PDP's hardened milestone.
