@@ -1,13 +1,4 @@
-"""Phase 3 audit, integrity and security-event hooks.
-
-This module contains two kinds of protection:
-1. SQLAlchemy mutation auditing, registered at import time.
-2. Flask request hooks for download integrity and request-level audit events.
-
-The Flask hooks are registered lazily when the application's context is first
-pushed. This keeps the model import cycle safe while ensuring the hooks are
-actually attached to the running Flask application.
-"""
+"""Phase 3 audit, integrity and security-event hooks."""
 
 import hashlib
 import os
@@ -19,7 +10,6 @@ from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 
 from config import Config
-from crypto.encryption import decrypt_file
 from extensions import db
 from models.audit_log import AuditLog
 from models.case import Case
@@ -41,8 +31,6 @@ def _request_user_id():
 def _ip_address():
     if not has_request_context():
         return None
-    # Do not blindly trust arbitrary X-Forwarded-For values. A deployment can
-    # explicitly enable proxy trust through TRUST_PROXY_HEADERS.
     if Config.TRUST_PROXY_HEADERS:
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
@@ -130,8 +118,6 @@ def _verify_download_integrity():
 
     stored_file = db.session.get(StoredFile, file_id)
     if stored_file is None or not stored_file.encrypted_sha256_hash:
-        # Legacy records without the new storage-object hash are handled by the
-        # migration/backfill process rather than silently claiming integrity.
         return None
 
     from authz import can_download_document
@@ -143,70 +129,22 @@ def _verify_download_integrity():
         encrypted_data = _storage_bytes(stored_file.encrypted_filename)
         actual_encrypted_hash = _sha256(encrypted_data)
     except (FileNotFoundError, OSError, ValueError):
-        _write_integrity_failure(
-            stored_file,
-            stored_file.encrypted_sha256_hash,
-            "MISSING_OR_UNREADABLE",
-        )
+        _write_integrity_failure(stored_file, stored_file.encrypted_sha256_hash, "MISSING_OR_UNREADABLE")
         flash("Document integrity could not be verified. Download blocked.", "error")
         return redirect(url_for("dashboard"))
 
     if actual_encrypted_hash != stored_file.encrypted_sha256_hash:
-        _write_integrity_failure(
-            stored_file,
-            stored_file.encrypted_sha256_hash,
-            actual_encrypted_hash,
-        )
+        _write_integrity_failure(stored_file, stored_file.encrypted_sha256_hash, actual_encrypted_hash)
         flash("Document integrity verification failed. Download blocked.", "error")
         return redirect(url_for("dashboard"))
 
-    # Do not decrypt twice. The download view performs the password-based
-    # decryption. This hook verifies the immutable encrypted storage object
-    # before the password is consumed by the view.
     return None
 
 
+# Kept for compatibility with legacy records created before encrypted_sha256_hash
+# existed. New uploads and versions populate the field directly in app.py.
 def _backfill_encrypted_storage_hash(response):
-    """Populate encrypted_sha256_hash for newly created storage objects."""
-    if request.endpoint not in ("upload", "create_document_version"):
-        return
-    if request.method != "POST" or response.status_code not in (302, 303):
-        return
-    if not getattr(current_user, "is_authenticated", False):
-        return
-
-    uploaded = request.files.get("file")
-    filename = secure_filename(uploaded.filename) if uploaded else ""
-    if not filename:
-        return
-
-    if request.endpoint == "upload":
-        case_id = request.form.get("case_id", type=int)
-        if not case_id:
-            return
-        document = db.session.scalar(
-            db.select(CaseDocument)
-            .join(StoredFile, StoredFile.id == CaseDocument.stored_file_id)
-            .where(
-                CaseDocument.case_id == case_id,
-                StoredFile.user_id == current_user.id,
-                StoredFile.original_filename == filename,
-            )
-            .order_by(StoredFile.uploaded_at.desc())
-        )
-    else:
-        document_id = request.view_args.get("document_id") if request.view_args else None
-        document = db.session.get(CaseDocument, document_id) if document_id else None
-
-    if document is None or document.stored_file.encrypted_sha256_hash:
-        return
-
-    try:
-        encrypted_data = _storage_bytes(document.stored_file.encrypted_filename)
-        document.stored_file.encrypted_sha256_hash = _sha256(encrypted_data)
-        db.session.commit()
-    except (FileNotFoundError, OSError, ValueError):
-        db.session.rollback()
+    return None
 
 
 EVENT_MAP = {
@@ -229,11 +167,22 @@ def _record_request_event(response):
     action = EVENT_MAP.get((request.endpoint, request.method))
     if not action:
         return
-    success = response.status_code < 400
-    details = f"HTTP {response.status_code}"
-    if action == "DOWNLOAD" and response.status_code in (302, 303):
+
+    if action == "LOGIN":
+        authenticated = bool(getattr(current_user, "is_authenticated", False))
+        action = "LOGIN" if authenticated else "LOGIN_FAILED"
+        success = authenticated and response.status_code < 400
+        details = f"HTTP {response.status_code}"
+    elif action == "DOWNLOAD" and getattr(g, "phase3_blocked", False):
         success = False
-        details = "Download request redirected or denied"
+        details = "Download blocked by integrity verification"
+    else:
+        success = response.status_code < 400
+        details = f"HTTP {response.status_code}"
+        if action == "DOWNLOAD" and response.status_code in (302, 303):
+            success = False
+            details = "Download request redirected or denied"
+
     db.session.add(AuditLog(
         user_id=_request_user_id(),
         action=action,
@@ -264,9 +213,8 @@ def _register_app_hooks(app):
 
     @app.after_request
     def phase3_audit_events(response):
-        if not getattr(g, "phase3_blocked", False):
-            _backfill_encrypted_storage_hash(response)
-            _record_request_event(response)
+        _backfill_encrypted_storage_hash(response)
+        _record_request_event(response)
         return response
 
     app.extensions["phase3_audit_hooks_registered"] = True
@@ -274,5 +222,4 @@ def _register_app_hooks(app):
 
 @appcontext_pushed.connect
 def _register_when_app_context_is_pushed(sender, **extra):
-    """Register request hooks once the real Flask application exists."""
     _register_app_hooks(sender)
