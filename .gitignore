@@ -6,3 +6,9 @@ instance/
 uploads/
 *.db
 .vscode/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+backups/
+*.scsb

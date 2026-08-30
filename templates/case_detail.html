@@ -4,411 +4,109 @@
 
 {% block content %}
 <div class="container py-4 py-lg-5">
-
-  <!-- Case Header -->
   <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start mb-4">
     <div>
-      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">
-        Case {{ case.case_number }}
-      </span>
-
+      <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">Case {{ case.case_number }}</span>
       <h1 class="h2 fw-semibold mb-1">{{ case.title }}</h1>
-
-      <p class="text-secondary mb-0">
-        {{ case.description or 'No description provided.' }}
-      </p>
+      <p class="text-secondary mb-0">{{ case.description or 'No description provided.' }}</p>
     </div>
 
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-success rounded-3"
-         href="{{ url_for('manage_case_assignments', case_id=case.id) }}">
+    <div class="d-flex flex-wrap gap-2">
+      {% if can_manage_assignments %}
+      <a class="btn btn-outline-success rounded-3" href="{{ url_for('manage_case_assignments', case_id=case.id) }}">
         Manage assignments
       </a>
-
-      <a class="btn btn-success rounded-3"
-         href="{{ url_for('upload') }}">
+      {% endif %}
+      {% if can_manage %}
+      <a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">
         Add document ↑
       </a>
+      {% endif %}
     </div>
   </div>
 
-
-  <!-- Case Information -->
   <div class="row g-3 mb-4">
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Status</div>
-          <div class="fw-semibold mt-1">{{ case.status }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Department</div>
-          <div class="fw-semibold mt-1">
-            {{ case.department or 'Not specified' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm rounded-4 h-100">
-        <div class="card-body">
-          <div class="small text-secondary">Documents</div>
-          <div class="fw-semibold mt-1">
-            {{ case.documents|length }}
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Status</div><div class="fw-semibold mt-1">{{ case.status }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Department</div><div class="fw-semibold mt-1">{{ case.department or 'Not specified' }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary">Documents</div><div class="fw-semibold mt-1">{{ case.documents|length }}</div></div></div></div>
   </div>
 
-
-  <!-- Documents -->
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-
     <div class="card-header bg-white border-0 p-4">
       <h2 class="h4 mb-1">Case Documents</h2>
-      <p class="text-secondary mb-0">
-        Encrypted documents associated with this case.
-      </p>
+      <p class="text-secondary mb-0">Encrypted documents associated with this case.</p>
     </div>
 
     {% if case.documents %}
-
     <div class="table-responsive">
-
       <table class="table table-hover align-middle mb-0">
-
-        <thead class="table-light">
-          <tr>
-            <th class="ps-4">Document</th>
-            <th>Category</th>
-            <th>Version</th>
-            <th>Status</th>
-            <th>Shares</th>
-            <th class="text-end pe-4">Action</th>
-          </tr>
-        </thead>
-
+        <thead class="table-light"><tr><th class="ps-4">Document</th><th>Category</th><th>Version</th><th>Status</th><th>Shares</th><th class="text-end pe-4">Action</th></tr></thead>
         <tbody>
-
         {% for document in case.documents %}
-
-          <!-- Document row -->
           <tr>
-
-            <td class="ps-4">
-              <strong>{{ document.stored_file.original_filename }}</strong>
-
-              <div class="small text-secondary">
-                {{ document.stored_file.file_size }} bytes
-              </div>
-            </td>
-
-            <td>
-              {{ document.category }}
-            </td>
-
-            <td>
-              <span class="fw-semibold">
-                v{{ document.version }}
-              </span>
-            </td>
-
-            <td>
-              <span class="badge rounded-pill text-bg-success">
-                {{ document.status }}
-              </span>
-            </td>
-
-            <td>
-              {{ document.shares|length }}
-            </td>
-
+            <td class="ps-4"><strong class="text-break">{{ document.stored_file.original_filename }}</strong><div class="small text-secondary">{{ document.stored_file.file_size }} bytes</div></td>
+            <td>{{ document.category }}</td>
+            <td><span class="fw-semibold">v{{ document.version }}</span></td>
+            <td><span class="badge rounded-pill text-bg-success">{{ document.status }}</span></td>
+            <td>{{ document.shares|length }}</td>
             <td class="text-end pe-4">
-
               <div class="d-flex justify-content-end gap-2">
-
                 <a class="btn btn-sm btn-outline-success decrypt-download-trigger"
                    href="{{ url_for('download', file_id=document.stored_file.id) }}"
                    data-download-url="{{ url_for('download', file_id=document.stored_file.id) }}"
-                   data-document-name="{{ document.stored_file.original_filename }}">
+                   data-document-name="{{ document.stored_file.original_filename }}"
+                   aria-label="Decrypt and download {{ document.stored_file.original_filename }}">
                   Download →
                 </a>
-
               </div>
-
             </td>
-
           </tr>
-
 
           {% if can_manage %}
-
-          <!-- Create New Version -->
           <tr class="table-light">
-
             <td colspan="6" class="px-4 py-3">
-
               <div class="border rounded-4 bg-white p-3 mb-3">
-
-                <div class="fw-semibold mb-1">
-                  Create New Version
-                </div>
-
-                <div class="small text-secondary mb-3">
-                  Upload an updated copy of this document.
-                  The new version will be linked to the previous version using its SHA-256 hash.
-                </div>
-
-                <form
-                  method="post"
-                  enctype="multipart/form-data"
-                  action="{{ url_for('create_document_version', document_id=document.id) }}"
-                  class="row g-3 align-items-end"
-                >
-
-                  <div class="col-md-5">
-
-                    <label class="form-label small fw-semibold">
-                      Updated document
-                    </label>
-
-                    <input
-                      type="file"
-                      name="file"
-                      class="form-control"
-                      required
-                    >
-
-                    <div class="form-text">
-                      Maximum file size: 10 MB
-                    </div>
-
-                  </div>
-
-
-                  <div class="col-md-4">
-
-                    <label class="form-label small fw-semibold">
-                      Encryption password
-                    </label>
-
-                    <input
-                      type="password"
-                      name="encryption_password"
-                      class="form-control"
-                      placeholder="Enter encryption password"
-                      required
-                    >
-
-                  </div>
-
-
-                  <div class="col-md-3">
-
-                    <button
-                      type="submit"
-                      class="btn btn-success w-100"
-                    >
-                      Create Version {{ document.version + 1 }} ↑
-                    </button>
-
-                  </div>
-
+                <div class="fw-semibold mb-1">Create New Version</div>
+                <div class="small text-secondary mb-3">Upload an updated copy. The new version is linked to the previous version using its SHA-256 hash.</div>
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('create_document_version', document_id=document.id) }}" class="row g-3 align-items-end">
+                  <div class="col-md-5"><label class="form-label small fw-semibold" for="version-file-{{ document.id }}">Updated document</label><input id="version-file-{{ document.id }}" type="file" name="file" class="form-control" required><div class="form-text">Maximum file size: 10 MB</div></div>
+                  <div class="col-md-4"><label class="form-label small fw-semibold" for="version-password-{{ document.id }}">Encryption password</label><input id="version-password-{{ document.id }}" type="password" name="encryption_password" class="form-control" placeholder="Enter encryption password" autocomplete="new-password" required></div>
+                  <div class="col-md-3"><button type="submit" class="btn btn-success w-100">Create Version {{ document.version + 1 }} ↑</button></div>
                 </form>
-
               </div>
 
-
-              <!-- Sharing -->
-              <form
-                method="post"
-                action="{{ url_for('share_document', document_id=document.id) }}"
-                class="row g-2 align-items-end"
-              >
-
-                <div class="col-md-5">
-
-                  <label class="form-label small mb-1">
-                    Share with account email
-                  </label>
-
-                  <input
-                    type="email"
-                    name="email"
-                    class="form-control"
-                    placeholder="teammate@example.com"
-                    required
-                  >
-
-                </div>
-
-
-                <div class="col-md-3">
-
-                  <label class="form-label small mb-1">
-                    Expires (optional)
-                  </label>
-
-                  <input
-                    type="datetime-local"
-                    name="expires_at"
-                    class="form-control"
-                  >
-
-                </div>
-
-
-                <div class="col-md-2 form-check ms-md-2">
-
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    name="can_download"
-                    id="download-{{ document.id }}"
-                  >
-
-                  <label
-                    class="form-check-label small"
-                    for="download-{{ document.id }}"
-                  >
-                    Allow download
-                  </label>
-
-                </div>
-
-
-                <div class="col-md-2">
-
-                  <button
-                    class="btn btn-outline-success w-100"
-                    type="submit"
-                  >
-                    Share / Update
-                  </button>
-
-                </div>
-
+              <form method="post" action="{{ url_for('share_document', document_id=document.id) }}" class="row g-2 align-items-end">
+                <div class="col-md-5"><label class="form-label small mb-1" for="share-email-{{ document.id }}">Share with account email</label><input id="share-email-{{ document.id }}" type="email" name="email" class="form-control" placeholder="teammate@example.com" autocomplete="email" required></div>
+                <div class="col-md-3"><label class="form-label small mb-1" for="share-expiry-{{ document.id }}">Expires (optional)</label><input id="share-expiry-{{ document.id }}" type="datetime-local" name="expires_at" class="form-control"></div>
+                <div class="col-md-2 form-check ms-md-2"><input class="form-check-input" type="checkbox" name="can_download" id="download-{{ document.id }}"><label class="form-check-label small" for="download-{{ document.id }}">Allow download</label></div>
+                <div class="col-md-2"><button class="btn btn-outline-success w-100" type="submit">Share / Update</button></div>
               </form>
 
-
-              <!-- Share Records -->
               {% if document.shares %}
-
-              <div class="mt-3">
-
-                <div class="small fw-semibold mb-2">
-                  Share records
-                </div>
-
+              <div class="mt-3"><div class="small fw-semibold mb-2">Share records</div>
                 {% for share in document.shares %}
-
-                <div class="d-flex flex-wrap justify-content-between align-items-center border rounded-3 bg-white p-2 mb-2">
-
-                  <div class="small">
-
-                    <strong>
-                      {{ share.shared_with.email }}
-                    </strong>
-
-                    · view
-
-                    {% if share.can_download %}
-                      + download
-                    {% endif %}
-
-                    {% if share.expires_at %}
-                      · expires
-                      {{ share.expires_at.strftime('%d %b %Y, %H:%M UTC') }}
-                    {% endif %}
-
-                  </div>
-
-
-                  <form
-                    method="post"
-                    action="{{ url_for(
-                      'revoke_share',
-                      document_id=document.id,
-                      share_id=share.id
-                    ) }}"
-                  >
-
-                    <button
-                      class="btn btn-sm btn-outline-danger"
-                      type="submit"
-                    >
-                      Revoke
-                    </button>
-
-                  </form>
-
+                <div class="d-flex flex-wrap justify-content-between align-items-center border rounded-3 bg-white p-2 mb-2 gap-2">
+                  <div class="small"><strong>{{ share.shared_with.email }}</strong> · view{% if share.can_download %} + download{% endif %}{% if share.expires_at %} · expires {{ share.expires_at.strftime('%d %b %Y, %H:%M UTC') }}{% endif %}</div>
+                  <form method="post" action="{{ url_for('revoke_share', document_id=document.id, share_id=share.id) }}"><button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button></form>
                 </div>
-
                 {% endfor %}
-
               </div>
-
               {% endif %}
-
             </td>
-
           </tr>
-
           {% endif %}
-
         {% endfor %}
-
         </tbody>
-
       </table>
-
     </div>
-
     {% else %}
-
     <div class="card-body text-center py-5">
-
-      <div class="display-6 mb-3">📁</div>
-
-      <h3 class="h5">
-        No documents yet
-      </h3>
-
-      <p class="text-secondary">
-        Add the first encrypted document to this case.
-      </p>
-
-      <a
-        class="btn btn-success rounded-3"
-        href="{{ url_for('upload') }}"
-      >
-        Add document
-      </a>
-
+      <div class="display-6 mb-3" aria-hidden="true">📁</div><h3 class="h5">No documents yet</h3><p class="text-secondary">{% if can_manage %}Add the first encrypted document to this case.{% else %}No documents have been added to this case yet.{% endif %}</p>
+      {% if can_manage %}<a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document</a>{% endif %}
     </div>
-
     {% endif %}
-
   </div>
 
-
-  <!-- Security Note -->
-  <div class="alert alert-light border rounded-4 small mb-0">
-
-    Case assignments are explicit and deny-by-default.
-    Assigned users can access the case, while document sharing remains
-    separately controlled and expiring.
-
-  </div>
-
+  <div class="alert alert-light border rounded-4 small mb-0">Case access is deny-by-default. Management controls are shown only to users authorized to manage this case; document download remains separately authorization-controlled.</div>
 </div>
 {% endblock %}

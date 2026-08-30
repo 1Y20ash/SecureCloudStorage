@@ -215,7 +215,13 @@ def case_detail(case_id):
     if case is None or not can_access_case(current_user, case):
         flash("Case not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-    return render_template("case_detail.html", case=case, categories=DOCUMENT_CATEGORIES)
+    return render_template(
+        "case_detail.html",
+        case=case,
+        categories=DOCUMENT_CATEGORIES,
+        can_manage=can_manage_case(current_user, case),
+        can_manage_assignments=can_manage_case_assignments(current_user, case),
+    )
 
 
 @app.route("/upload", methods=["GET", "POST"])
@@ -262,6 +268,7 @@ def upload():
                 encrypted_filename=encrypted_filename,
                 file_size=len(file_bytes),
                 sha256_hash=sha256_hash,
+                encrypted_sha256_hash=calculate_sha256(encrypted_data),
             )
             db.session.add(stored_file)
             db.session.flush()
@@ -306,10 +313,7 @@ def download(file_id):
         flash("You are not authorized to download this document.", "error")
         return redirect(url_for("dashboard"))
 
-    # GET is intentionally non-decrypting. The UI opens the password prompt first.
-    # Keeping this fallback avoids attempting decryption with an empty password.
     if request.method == "GET":
-        flash("Enter the document encryption password to decrypt and download the file.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
 
     password = request.form.get("password", "")
@@ -371,7 +375,7 @@ def create_document_version(document_id):
     try:
         store_encrypted_file(encrypted_filename, encrypted_data)
         storage_uploaded = True
-        stored_file = StoredFile(user_id=current_user.id, original_filename=original_filename, encrypted_filename=encrypted_filename, file_size=len(file_bytes), sha256_hash=sha256_hash)
+        stored_file = StoredFile(user_id=current_user.id, original_filename=original_filename, encrypted_filename=encrypted_filename, file_size=len(file_bytes), sha256_hash=sha256_hash, encrypted_sha256_hash=calculate_sha256(encrypted_data))
         db.session.add(stored_file)
         db.session.flush()
         db.session.add(DocumentVersion(case_document_id=document.id, version=next_version, stored_file_id=stored_file.id, sha256_hash=sha256_hash, previous_hash=previous_hash, created_by=current_user.id))
