@@ -1,19 +1,20 @@
 # Phase 8 — Collaboration, Security & Monitoring
 
-## Current scope
+## Current status
 
-Phase 8 is being rebuilt from the current `main` baseline rather than merging the older divergent Phase 8 branch. This preserves the completed Phase 7 history and avoids reintroducing stale changes.
+Phase 8 is implemented on a clean branch based on the completed Phase 7 `main` baseline. The security-monitoring module is wired into the Flask application without replacing the Phase 7 encryption, evidence, digital-signature, or OCR/search functionality.
 
-## Security monitoring controls brought forward
+## Implemented controls
 
-- Reuses the existing `AuditLog` as the canonical security-event stream.
+- Reuses the existing immutable `AuditLog` as the canonical security-event stream.
 - Adds an administrator-only `/security/monitoring` dashboard.
 - Adds lightweight in-process sliding-window request limiting.
 - Adds stricter authentication request limiting for `/login` POST requests.
 - Adds security response headers: CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy and Permissions-Policy.
-- Adds HSTS automatically when requests are served over HTTPS.
+- Adds HSTS automatically for HTTPS requests.
 - Records rate-limit events without storing passwords, request bodies, or document plaintext.
 - Keeps existing encryption, authorization, evidence custody, digital signatures and Phase 7 OCR/search as the source of truth.
+- Integrates the monitoring registration directly into `app.py` through `register_security_monitoring(app)`.
 
 ## Design constraints
 
@@ -21,17 +22,27 @@ The project remains free-resource friendly. The limiter is dependency-free and s
 
 The monitoring dashboard is intended for administrators and displays security metadata rather than document plaintext or credentials.
 
-## Important implementation note
+Security monitoring is defensive telemetry and abuse protection; it does not claim statutory, legal, forensic, or compliance certification merely because these controls are implemented.
 
-The monitoring module has been added to this clean Phase 8 branch, but application registration is intentionally the next integration step. It must be wired into the current `app.py` without overwriting the completed Phase 7 storage/OCR changes.
+## Validation
 
-## Validation target
-
-Before Phase 8 is finalized, run:
+Run locally before merging:
 
 ```powershell
 python -m compileall -q .
 python -m pytest -q
 ```
 
-The security scanner policy will be finalized after integration. Bandit and pip-audit findings must remain visible rather than being hidden merely to obtain a green report.
+Bandit and pip-audit findings should remain visible in CI. Functional tests remain the blocking quality gate unless a specific security finding is deliberately reviewed and addressed.
+
+## Phase 8 completion criteria
+
+Phase 8 should be considered complete only after:
+
+1. The complete test suite passes.
+2. The application compiles cleanly.
+3. The security-monitoring route is reachable only by administrators.
+4. Security headers are present on application responses.
+5. Rate limiting behaves correctly and does not mix clients.
+6. Existing Phase 1–7 functionality remains intact.
+7. Git history remains phase-isolated and the branch is reviewed before merge.
