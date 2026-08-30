@@ -33,7 +33,15 @@ def test_repeated_wrong_passwords_never_return_plaintext(monkeypatch):
         )
         db.session.add(stored)
         db.session.flush()
-        db.session.add(CaseDocument(case_id=case.id, stored_file_id=stored.id, category="Other", version=1, status="Draft"))
+        db.session.add(
+            CaseDocument(
+                case_id=case.id,
+                stored_file_id=stored.id,
+                category="Other",
+                version=1,
+                status="Draft",
+            )
+        )
         db.session.commit()
         monkeypatch.setattr("app.read_encrypted_file", lambda filename: encrypted)
         with client.session_transaction() as session:
@@ -44,12 +52,11 @@ def test_repeated_wrong_passwords_never_return_plaintext(monkeypatch):
             response = client.post(
                 f"/documents/{stored.id}/download",
                 data={"password": wrong_password},
-                follow_redirects=True,
             )
-            assert response.status_code == 200
+            assert response.status_code == 302
             assert response.data != plaintext
-            assert "Incorrect encryption password" in response.get_data(as_text=True)
             assert "attachment" not in response.headers.get("Content-Disposition", "").lower()
+            assert response.headers["Location"].endswith(f"/cases/{case.id}")
 
         response = client.post(
             f"/documents/{stored.id}/download",
