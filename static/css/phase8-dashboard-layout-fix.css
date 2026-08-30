@@ -1,14 +1,5 @@
-/* SecureVault dashboard layout normalization */
-/* Loaded last so dashboard rendering is not affected by legacy global scaling/layout rules. */
-html,
-body {
-  zoom: 1 !important;
-  transform: none !important;
-  transform-origin: initial !important;
-  -moz-transform: none !important;
-  -moz-transform-origin: initial !important;
-}
-
+/* SecureVault dashboard layout normalization.
+   Scoped to dashboard layout so phase-specific CSS does not mutate global rendering. */
 /* The shared shell owns the outer page container; let the dashboard use the full shell width. */
 main.container {
   width: 100% !important;
