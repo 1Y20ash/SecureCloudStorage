@@ -68,3 +68,26 @@ def test_backup_requires_a_real_256_bit_key(tmp_path):
     _create_db(source_db)
     with pytest.raises(ValueError, match="32 bytes"):
         create_backup(tmp_path / "backup.scsb", f"sqlite:///{source_db}", key=_key(b"short"))
+
+
+def test_restore_rejects_unknown_database_scheme(tmp_path):
+    source_db = tmp_path / "source.db"
+    _create_db(source_db)
+    backup = tmp_path / "backup.scsb"
+    create_backup(backup, f"sqlite:///{source_db}", key=_key())
+
+    with pytest.raises(ValueError, match="only SQLite and PostgreSQL"):
+        restore_backup(backup, "mysql://example.invalid/db", key=_key())
+
+
+def test_restore_rejects_missing_backup(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        restore_backup(tmp_path / "missing.scsb", f"sqlite:///{tmp_path / 'restored.db'}", key=_key())
+
+
+def test_restore_rejects_malformed_container(tmp_path):
+    backup = tmp_path / "malformed.scsb"
+    backup.write_bytes(b"not-a-securecloudstorage-backup")
+
+    with pytest.raises(ValueError, match="Invalid SecureCloudStorage backup"):
+        restore_backup(backup, f"sqlite:///{tmp_path / 'restored.db'}", key=_key())
