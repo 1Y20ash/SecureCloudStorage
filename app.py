@@ -116,6 +116,18 @@ def calculate_sha256(file_bytes):
     return hashlib.sha256(file_bytes).hexdigest()
 
 
+def record_admin_event(action, target_user=None, success=True, details=None):
+    db.session.add(AuditLog(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        action=action,
+        resource_type="user",
+        resource_id=target_user.id if target_user is not None else None,
+        success=success,
+        ip_address=request.remote_addr,
+        details=details,
+    ))
+
+
 @app.route("/")
 def home():
     if current_user.is_authenticated:
@@ -193,14 +205,7 @@ def create_case():
             flash("Invalid case status.", "error")
             return render_template("case_form.html", statuses=CASE_STATUSES)
         case_count = db.session.scalar(db.select(db.func.count(Case.id))) or 0
-        case = Case(
-            case_number=f"CASE-{datetime.now(timezone.utc).year}-{case_count + 1:03d}",
-            title=title,
-            description=description or None,
-            department=department or None,
-            status=status,
-            created_by=current_user.id,
-        )
+        case = Case(case_number=f"CASE-{datetime.now(timezone.utc).year}-{case_count + 1:03d}", title=title, description=description or None, department=department or None, status=status, created_by=current_user.id)
         db.session.add(case)
         db.session.commit()
         flash(f"{case.case_number} created successfully.", "success")
@@ -215,13 +220,7 @@ def case_detail(case_id):
     if case is None or not can_access_case(current_user, case):
         flash("Case not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-    return render_template(
-        "case_detail.html",
-        case=case,
-        categories=DOCUMENT_CATEGORIES,
-        can_manage=can_manage_case(current_user, case),
-        can_manage_assignments=can_manage_case_assignments(current_user, case),
-    )
+    return render_template("case_detail.html", case=case, categories=DOCUMENT_CATEGORIES, can_manage=can_manage_case(current_user, case), can_manage_assignments=can_manage_case_assignments(current_user, case))
 
 
 @app.route("/upload", methods=["GET", "POST"])
@@ -262,23 +261,10 @@ def upload():
         try:
             store_encrypted_file(encrypted_filename, encrypted_data)
             storage_uploaded = True
-            stored_file = StoredFile(
-                user_id=current_user.id,
-                original_filename=original_filename,
-                encrypted_filename=encrypted_filename,
-                file_size=len(file_bytes),
-                sha256_hash=sha256_hash,
-                encrypted_sha256_hash=calculate_sha256(encrypted_data),
-            )
+            stored_file = StoredFile(user_id=current_user.id, original_filename=original_filename, encrypted_filename=encrypted_filename, file_size=len(file_bytes), sha256_hash=sha256_hash, encrypted_sha256_hash=calculate_sha256(encrypted_data))
             db.session.add(stored_file)
             db.session.flush()
-            case_document = CaseDocument(
-                case_id=case.id,
-                stored_file_id=stored_file.id,
-                category=category,
-                version=1,
-                status="Draft",
-            )
+            case_document = CaseDocument(case_id=case.id, stored_file_id=stored_file.id, category=category, version=1, status="Draft")
             db.session.add(case_document)
             db.session.flush()
             db.session.add(DocumentVersion(case_document_id=case_document.id, version=1, stored_file_id=stored_file.id, sha256_hash=sha256_hash, previous_hash=None, created_by=current_user.id))
@@ -287,10 +273,8 @@ def upload():
         except Exception:
             db.session.rollback()
             if storage_uploaded:
-                try:
-                    delete_encrypted_file(encrypted_filename)
-                except Exception:
-                    pass
+                try: delete_encrypted_file(encrypted_filename)
+                except Exception: pass
             flash("The file could not be encrypted and stored.", "error")
             return render_template("upload.html", cases=cases, categories=DOCUMENT_CATEGORIES)
         flash("Document encrypted and added to the case successfully.", "success")
@@ -305,39 +289,25 @@ def download(file_id):
     if stored_file is None:
         flash("File not found.", "error")
         return redirect(url_for("dashboard"))
-
-    document = db.session.scalar(
-        db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id)
-    )
+    document = db.session.scalar(db.select(CaseDocument).where(CaseDocument.stored_file_id == stored_file.id))
     if document is None or not can_download_document(current_user, document):
         flash("You are not authorized to download this document.", "error")
         return redirect(url_for("dashboard"))
-
     if request.method == "GET":
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     password = request.form.get("password", "")
     if not password:
         flash("A document password is required.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
     try:
-        decrypted = decrypt_file(
-            read_encrypted_file(stored_file.encrypted_filename),
-            password,
-        )
+        decrypted = decrypt_file(read_encrypted_file(stored_file.encrypted_filename), password)
     except InvalidTag:
         flash("Incorrect encryption password.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
     except ValueError:
         flash("The encrypted file format is invalid or corrupted.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
-
-    return send_file(
-        io.BytesIO(decrypted),
-        as_attachment=True,
-        download_name=stored_file.original_filename,
-    )
+    return send_file(io.BytesIO(decrypted), as_attachment=True, download_name=stored_file.original_filename)
 
 
 @app.route("/documents/<int:document_id>/versions", methods=["POST"])
@@ -386,10 +356,8 @@ def create_document_version(document_id):
     except Exception:
         db.session.rollback()
         if storage_uploaded:
-            try:
-                delete_encrypted_file(encrypted_filename)
-            except Exception:
-                pass
+            try: delete_encrypted_file(encrypted_filename)
+            except Exception: pass
         flash("The new document version could not be saved.", "error")
         return redirect(url_for("case_detail", case_id=document.case_id))
     flash(f"Document version {next_version} created successfully.", "success")
@@ -517,15 +485,23 @@ def manage_users():
         user = db.session.get(User, request.form.get("user_id", type=int))
         role = request.form.get("role", "")
         if user is None:
+            record_admin_event("ROLE_CHANGE_FAILED", success=False, details="Target user was not found")
+            db.session.commit()
             flash("User not found.", "error")
             return redirect(url_for("manage_users"))
         if role not in ROLES:
+            record_admin_event("ROLE_CHANGE_FAILED", target_user=user, success=False, details="Invalid role selected")
+            db.session.commit()
             flash("Invalid role selected.", "error")
             return redirect(url_for("manage_users"))
         if user.id == current_user.id and role != "Admin":
+            record_admin_event("ROLE_CHANGE_BLOCKED", target_user=user, success=False, details="Administrator attempted to remove own Admin role")
+            db.session.commit()
             flash("You cannot remove your own Admin role.", "error")
             return redirect(url_for("manage_users"))
+        previous_role = user.role
         user.role = role
+        record_admin_event("ROLE_CHANGED", target_user=user, details=f"Role changed from {previous_role} to {role}")
         db.session.commit()
         flash(f"Role updated for {user.email}.", "success")
         return redirect(url_for("manage_users"))
@@ -550,9 +526,22 @@ register_phase6_ui(app)
 from phase7_ui import register_phase7_ui
 register_phase7_ui(app)
 
-from security_monitoring import register_security_monitoring
-register_security_monitoring(app)
+from phase8_ui import register_phase8_ui
+register_phase8_ui(app)
 
+from phase3_ui import register_phase3_ui
+register_phase3_ui(app)
+
+from audit_hooks import register_audit_hooks
+register_audit_hooks(app)
+
+from security_headers import register_security_headers
+register_security_headers(app)
+
+from backup import register_backup_commands
+register_backup_commands(app)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=False)
