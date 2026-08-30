@@ -1,51 +1,51 @@
 {% extends "base.html" %}
-{% block title %}SecureVault — Private Cloud Vault & AES-256 Encryption{% endblock %}
+{% block title %}SecureVault — Secure Digital Document Management System{% endblock %}
 
 {% block content %}
 <!-- HERO SECTION -->
 <section class="hero reveal is-visible">
     <span class="eyebrow">
         <span class="eyebrow-dot"></span>
-        Privacy-first cloud storage
+        Secure digital document management
     </span>
-    <h1>Store privately.<br><span class="accent-text">Stay in control.</span></h1>
-    <p>SecureVault encrypts your files with AES-256-GCM before storage. Your private files remain protected from the moment they leave your device.</p>
+    <h1>Protect evidence.<br><span class="accent-text">Stay in control.</span></h1>
+    <p>SecureVault helps authorized teams manage sensitive legal and investigation documents with encryption, case-based organization, access control, integrity verification, and auditable workflows.</p>
     <div class="hero-actions">
         <a class="button" href="{{ url_for('register') }}">
-            Create your secure vault →
+            Create your secure workspace →
         </a>
         <a class="button secondary" href="{{ url_for('login') }}">Sign in</a>
     </div>
 </section>
 
-<!-- INTERACTIVE ENCRYPTION FLOW VISUALIZATION -->
+<!-- INTERACTIVE SECURITY FLOW VISUALIZATION -->
 <section class="encryption-demo-section reveal delay-1">
     <div class="encryption-demo-card">
         <span class="eyebrow">Interactive Security Pipeline</span>
-        <h2>AES-256-GCM Encryption Flow</h2>
-        <p style="color: var(--muted); font-size: 13px; margin: 4px 0 0;">Watch how your readable document is transformed into authenticated ciphertext before saving.</p>
+        <h2>Secure Document Protection Flow</h2>
+        <p style="color: var(--muted); font-size: 13px; margin: 4px 0 0;">See how a sensitive document moves through protection before it becomes part of an authorized case workspace.</p>
 
         <div class="demo-pipeline">
             <div class="pipeline-box">
                 <div class="pipeline-icon">📄</div>
-                <div class="pipeline-title">project.pdf</div>
-                <div class="pipeline-sub">2.4 MB · Plaintext</div>
+                <div class="pipeline-title">Case Document</div>
+                <div class="pipeline-sub">Metadata · Case · Category</div>
             </div>
 
             <div class="pipeline-arrow">→</div>
 
             <div class="pipeline-box active">
                 <div class="pipeline-icon">🔐</div>
-                <div class="pipeline-title">AES-256-GCM</div>
-                <div class="pipeline-sub">600k PBKDF2 Iterations</div>
+                <div class="pipeline-title">Protect & Verify</div>
+                <div class="pipeline-sub">AES-256-GCM · SHA-256</div>
             </div>
 
             <div class="pipeline-arrow">→</div>
 
             <div class="ciphertext-stream" id="ciphertext-stream">
-                8F3A91B4C9D2...E82D<br>
-                A91F4288002F...9B1C<br>
-                7C12D8FA901B...44A2
+                CASE-2026-001 · VERIFIED<br>
+                AUDIT TRAIL · ACCESS CONTROL<br>
+                ENCRYPTED STORAGE · INTEGRITY
             </div>
         </div>
     </div>
@@ -54,34 +54,34 @@
 <!-- HOW SECUREVAULT WORKS -->
 <section id="how-it-works" class="reveal delay-2">
     <div class="section-title-wrap">
-        <span class="eyebrow">Architectural Design</span>
+        <span class="eyebrow">DMS Workflow</span>
         <h2>How SecureVault Works</h2>
-        <p>Four transparent steps to protect your sensitive documents with industry-standard cryptography.</p>
+        <p>Four connected layers for securely managing legal and investigation documents from intake to retrieval.</p>
     </div>
 
     <div class="steps-grid">
         <div class="step-card">
             <span class="step-number">01</span>
-            <h3>Choose your file</h3>
-            <p>Select any PDF, photo, document, or archive file from your computer.</p>
+            <h3>Organize by case</h3>
+            <p>Create a case and classify documents by investigation, legal, forensic, evidence, or other approved categories.</p>
         </div>
 
         <div class="step-card">
             <span class="step-number">02</span>
-            <h3>Encrypt</h3>
-            <p>AES-256-GCM encrypts your file using a unique 16-byte salt and 12-byte nonce.</p>
+            <h3>Protect</h3>
+            <p>AES-256-GCM protects stored documents while SHA-256 supports document integrity verification.</p>
         </div>
 
         <div class="step-card">
             <span class="step-number">03</span>
-            <h3>Store</h3>
-            <p>Only encrypted ciphertext is stored in isolated disk storage. Zero plain-text leaks.</p>
+            <h3>Control access</h3>
+            <p>Role- and case-aware authorization limits sensitive operations to users who are permitted to perform them.</p>
         </div>
 
         <div class="step-card">
             <span class="step-number">04</span>
-            <h3>Retrieve</h3>
-            <p>Authenticate into your vault, enter your decryption key, and stream your original file.</p>
+            <h3>Track & retrieve</h3>
+            <p>Audit activity, evidence history, versions, signatures, and document search provide traceable retrieval workflows.</p>
         </div>
     </div>
 </section>
@@ -90,8 +90,8 @@
 <section id="security" class="reveal delay-3">
     <div class="section-title-wrap">
         <span class="eyebrow">Security Principles</span>
-        <h2>Built For Privacy</h2>
-        <p>Every layer of SecureVault is designed for cryptographic confidentiality and file integrity.</p>
+        <h2>Built For Sensitive Documents</h2>
+        <p>Security remains the foundation of the DMS while case management, evidence tracking, and retrieval build on top of it.</p>
     </div>
 
     <div class="security-grid">
@@ -99,31 +99,31 @@
             <div class="security-check">✓</div>
             <div class="security-item-text">
                 <h4>AES-256-GCM Authenticated Encryption</h4>
-                <p>Galois/Counter Mode ensures both data confidentiality and tamper verification.</p>
+                <p>Stored document content is protected with authenticated encryption to provide confidentiality and tamper detection.</p>
             </div>
         </div>
 
         <div class="security-item">
             <div class="security-check">✓</div>
             <div class="security-item-text">
-                <h4>Zero Plain-Text File Persistence</h4>
-                <p>Files are encrypted in memory before disk write operations occur.</p>
+                <h4>Case-Aware Access Control</h4>
+                <p>Deny-by-default authorization scopes sensitive case and document operations to permitted users and roles.</p>
             </div>
         </div>
 
         <div class="security-item">
             <div class="security-check">✓</div>
             <div class="security-item-text">
-                <h4>Isolated Account Vaults</h4>
-                <p>Database foreign keys strict-scope file queries exclusively to the logged-in owner.</p>
+                <h4>Integrity & Auditability</h4>
+                <p>SHA-256 integrity records and audit events help make document activity traceable and tamper-evident.</p>
             </div>
         </div>
 
         <div class="security-item">
             <div class="security-check">✓</div>
             <div class="security-item-text">
-                <h4>Cryptographic Nonces &amp; PBKDF2</h4>
-                <p>Keys are derived via PBKDF2HMAC-SHA256 with 600,000 hashing rounds for resilience.</p>
+                <h4>Evidence & Lifecycle Controls</h4>
+                <p>Versioning, evidence custody, signatures, OCR/search, and security monitoring support controlled document workflows.</p>
             </div>
         </div>
     </div>

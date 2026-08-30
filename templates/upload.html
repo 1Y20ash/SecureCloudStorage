@@ -6,7 +6,7 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden"><div class="card-body p-4 p-md-5">
       <span class="badge rounded-pill text-bg-light border px-3 py-2 mb-3">PS 26190 · Secure Document Intake</span>
       <h1 class="display-6 fw-semibold mb-2">Add document to a case</h1>
-      <p class="text-secondary mb-4">The original file is encrypted before it is written to storage.</p>
+      <p class="text-secondary mb-4">The document is protected before it is written to storage, while its case and classification metadata remain available for authorized management and retrieval.</p>
       {% if not cases %}
       <div class="alert alert-warning rounded-3">Create a case before uploading a legal or investigation document. <a href="{{ url_for('create_case') }}" class="alert-link">Create a case →</a></div>
       {% endif %}
@@ -14,9 +14,9 @@
         <div class="mb-3"><label for="case_id" class="form-label fw-semibold">Case</label><select id="case_id" name="case_id" class="form-select" required {% if not cases %}disabled{% endif %}><option value="">Select a case</option>{% for case in cases %}<option value="{{ case.id }}">{{ case.case_number }} — {{ case.title }}</option>{% endfor %}</select></div>
         <div class="mb-3"><label for="category" class="form-label fw-semibold">Document category</label><select id="category" name="category" class="form-select" required {% if not cases %}disabled{% endif %}>{% for category in categories %}<option value="{{ category }}">{{ category }}</option>{% endfor %}</select></div>
         <div class="border border-2 border-success-subtle rounded-4 p-4 text-center bg-light mb-3"><input id="file" class="form-control mb-3" type="file" name="file" required {% if not cases %}disabled{% endif %}><div class="display-6 text-success mb-2">↑</div><div class="fw-semibold">Select a document</div><div class="small text-secondary mt-1">Any file type · AES-256-GCM · Maximum 10 MB</div></div>
-        <div class="mb-4"><label for="encryption_password" class="form-label fw-semibold">Encryption password</label><input id="encryption_password" class="form-control" type="password" name="encryption_password" minlength="8" placeholder="Enter a password to lock this document" required {% if not cases %}disabled{% endif %}><div class="form-text">This password is required to decrypt the document later.</div></div>
-        <div class="alert alert-success rounded-3"><strong>AES-256-GCM protected.</strong> The plaintext file is encrypted before storage.</div>
-        <div class="d-flex gap-2"><button class="btn btn-success btn-lg rounded-3" type="submit" {% if not cases %}disabled{% endif %}>Encrypt &amp; store document</button><a class="btn btn-outline-secondary btn-lg rounded-3" href="{{ url_for('dashboard') }}">Cancel</a></div>
+        <div class="mb-4"><label for="encryption_password" class="form-label fw-semibold">Document protection password</label><input id="encryption_password" class="form-control" type="password" name="encryption_password" minlength="8" placeholder="Enter a password to protect this document" required {% if not cases %}disabled{% endif %}><div class="form-text">This password is required to decrypt the document when an authorized download is requested.</div></div>
+        <div class="alert alert-success rounded-3"><strong>AES-256-GCM protected.</strong> The plaintext document is encrypted before storage.</div>
+        <div class="d-flex gap-2"><button class="btn btn-success btn-lg rounded-3" type="submit" {% if not cases %}disabled{% endif %}>Protect &amp; store document</button><a class="btn btn-outline-secondary btn-lg rounded-3" href="{{ url_for('dashboard') }}">Cancel</a></div>
       </form>
     </div></div>
   </div></div>

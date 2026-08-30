@@ -34,7 +34,7 @@
   <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
     <div class="card-header bg-white border-0 p-4">
       <h2 class="h4 mb-1">Case Documents</h2>
-      <p class="text-secondary mb-0">Encrypted documents associated with this case.</p>
+      <p class="text-secondary mb-0">Protected documents associated with this case.</p>
     </div>
 
     {% if case.documents %}
@@ -55,7 +55,7 @@
                    href="{{ url_for('download', file_id=document.stored_file.id) }}"
                    data-download-url="{{ url_for('download', file_id=document.stored_file.id) }}"
                    data-document-name="{{ document.stored_file.original_filename }}"
-                   aria-label="Decrypt and download {{ document.stored_file.original_filename }}">
+                   aria-label="Download {{ document.stored_file.original_filename }}">
                   Download →
                 </a>
               </div>
@@ -70,7 +70,7 @@
                 <div class="small text-secondary mb-3">Upload an updated copy. The new version is linked to the previous version using its SHA-256 hash.</div>
                 <form method="post" enctype="multipart/form-data" action="{{ url_for('create_document_version', document_id=document.id) }}" class="row g-3 align-items-end">
                   <div class="col-md-5"><label class="form-label small fw-semibold" for="version-file-{{ document.id }}">Updated document</label><input id="version-file-{{ document.id }}" type="file" name="file" class="form-control" required><div class="form-text">Maximum file size: 10 MB</div></div>
-                  <div class="col-md-4"><label class="form-label small fw-semibold" for="version-password-{{ document.id }}">Encryption password</label><input id="version-password-{{ document.id }}" type="password" name="encryption_password" class="form-control" placeholder="Enter encryption password" autocomplete="new-password" required></div>
+                  <div class="col-md-4"><label class="form-label small fw-semibold" for="version-password-{{ document.id }}">Document protection password</label><input id="version-password-{{ document.id }}" type="password" name="encryption_password" class="form-control" placeholder="Enter document protection password" autocomplete="new-password" required></div>
                   <div class="col-md-3"><button type="submit" class="btn btn-success w-100">Create Version {{ document.version + 1 }} ↑</button></div>
                 </form>
               </div>
@@ -101,7 +101,7 @@
     </div>
     {% else %}
     <div class="card-body text-center py-5">
-      <div class="display-6 mb-3" aria-hidden="true">📁</div><h3 class="h5">No documents yet</h3><p class="text-secondary">{% if can_manage %}Add the first encrypted document to this case.{% else %}No documents have been added to this case yet.{% endif %}</p>
+      <div class="display-6 mb-3" aria-hidden="true">📁</div><h3 class="h5">No documents yet</h3><p class="text-secondary">{% if can_manage %}Add the first protected document to this case.{% else %}No documents have been added to this case yet.{% endif %}</p>
       {% if can_manage %}<a class="btn btn-success rounded-3" href="{{ url_for('upload') }}">Add document</a>{% endif %}
     </div>
     {% endif %}
