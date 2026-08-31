@@ -1,7 +1,7 @@
-"""Phase 8 security monitoring and lightweight abuse protection.
+"""Security monitoring and administrative audit visibility.
 
-Uses the existing immutable audit log as the source of truth. No plaintext
-file contents or passwords are logged by this module.
+Uses the existing audit log as the source of truth. No plaintext file contents,
+passwords, encryption keys, or request bodies are logged by this module.
 """
 
 from collections import defaultdict, deque
@@ -70,12 +70,17 @@ def security_summary(hours=24):
     return {"total_events": total, "failed_events": failures, "integrity_failures": integrity}
 
 
-def recent_security_events(limit=50):
-    return db.session.scalars(db.select(AuditLog).where(AuditLog.resource_type == "SECURITY").order_by(AuditLog.created_at.desc()).limit(limit)).all()
+def recent_security_events(limit=100):
+    """Return recent audit/security activity from the single audit source of truth."""
+    return db.session.scalars(
+        db.select(AuditLog)
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    ).all()
 
 
 def register_security_monitoring(app):
-    """Register Phase 8 security middleware and admin monitoring endpoint."""
+    """Register security middleware and the Admin audit-monitoring endpoint."""
     from authz import is_admin
     from flask import Blueprint, render_template
     from flask_login import login_required
@@ -129,7 +134,7 @@ def register_security_monitoring(app):
                 resource_id=target.id if target else None,
                 success=successful,
                 ip_address=client_key(),
-                details=(f"Requested role: {requested_role}" if requested_role else "Role not supplied")[:500],
+                details=(f"Target: {target.name if target else 'unknown'}; requested role: {requested_role}" if requested_role else "Role not supplied")[:500],
             ))
             try:
                 db.session.commit()
@@ -144,7 +149,11 @@ def register_security_monitoring(app):
     def monitoring_dashboard():
         if not is_admin(current_user):
             abort(403)
-        return render_template("security_monitoring.html", summary=security_summary(), events=recent_security_events())
+        return render_template(
+            "security_monitoring.html",
+            summary=security_summary(),
+            events=recent_security_events(),
+        )
 
     if "phase8_security" not in app.blueprints:
         app.register_blueprint(phase8)
