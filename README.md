@@ -1,8 +1,8 @@
-# 🔐 SecureCloudStorage — Secure Digital Document Management System
+# 🔐 EVIDENTIA — Secure Digital Document Management System
 
-SecureCloudStorage has evolved from a privacy-first encrypted cloud-storage application into a **case-centric Secure Digital Document Management System (DMS)** for legal and investigation-document workflows, developed against **Problem Statement PS 26190**.
+**EVIDENTIA** is a case-centric Secure Digital Document Management System for legal and investigation-document workflows. It has evolved from an earlier privacy-first encrypted document-storage prototype into a broader platform covering case management, controlled access, document protection, integrity, auditability, evidence custody, digital signatures, OCR/search, security monitoring, and backup/recovery.
 
-> **Educational / demonstration system:** this project demonstrates security, document-management, evidence, integrity, authorization, OCR and cryptographic-signature concepts. It does **not** claim statutory or legal validity, professional security certification, or legal admissibility merely because a feature is implemented.
+> **Educational / demonstration system:** EVIDENTIA demonstrates security, document-management, evidence, integrity, authorization, OCR and cryptographic-signature concepts. It does **not** claim statutory or legal validity, professional security certification, or legal admissibility merely because a feature is implemented.
 
 <p align="center">
   <a href="https://secure-cloud-storage-nine.vercel.app"><strong>🚀 Live Demo</strong></a> ·
@@ -11,11 +11,13 @@ SecureCloudStorage has evolved from a privacy-first encrypted cloud-storage appl
 
 ## Project Status
 
-**PS-26190 implementation:** Phase 0–10 integrated into `main`  
-**Latest integration commit:** `0b7f5b2fe1343b7458e26cdaee3ad0b2a313dd9f`  
-**Release target:** `v1.1-ps-26190-final`
+**Current scope:** Full case-centric secure document-management workflow integrated into `main`  
+**Product name:** **EVIDENTIA**  
+**Repository name:** `SecureCloudStorage`  
+**Deployment:** Vercel production deployment  
+**Development approach:** Phase-wise implementation with CI validation and controlled integration
 
-The final compliance evidence index is maintained in [`docs/PS26190_COMPLIANCE_MATRIX.md`](docs/PS26190_COMPLIANCE_MATRIX.md).
+The repository name is retained to preserve the existing GitHub/Vercel integration. **EVIDENTIA is the application's actual product name and should be used in the user-facing product, documentation, presentations, and demonstrations.**
 
 ## Core Capabilities
 
@@ -33,21 +35,31 @@ The final compliance evidence index is maintained in [`docs/PS26190_COMPLIANCE_M
 - 💾 Encrypted backup and tested restore workflow
 - 🧪 Automated regression/security tests and dependency auditing
 
-## PS-26190 Phase Status
+## System Workflow
 
-| Phase | Capability | Status |
-|---|---|---|
-| 0 | Baseline & governance | ✅ Complete |
-| 1 | Core document & case management | ✅ Complete |
-| 2 | RBAC | ✅ Complete |
-| 3 | Audit & integrity | ✅ Complete |
-| 4 | Lifecycle & versioning | ✅ Complete |
-| 5 | Evidence & chain of custody | ✅ Complete |
-| 6 | Digital signatures | ✅ Complete |
-| 7 | OCR & intelligent search | ⚠️ Implemented; production verification remains deployment-specific |
-| 8 | Collaboration & security monitoring | ✅ Core scope complete |
-| 9 | Backup, recovery & hardening | ✅ Implemented/tested; deployment restore drill remains deployment-specific |
-| 10 | Final testing & PS compliance | ✅ Implemented and CI-validated |
+```text
+Case Creation
+     ↓
+Document Management
+     ↓
+Access Control & Assignment
+     ↓
+Encryption + Integrity
+     ↓
+Audit + Versioning
+     ↓
+Evidence + Chain of Custody
+     ↓
+Digital Signatures
+     ↓
+OCR + Search
+     ↓
+Security Monitoring
+     ↓
+Backup + Recovery
+     ↓
+Verified Retrieval
+```
 
 ## Security Architecture
 
@@ -88,9 +100,11 @@ Allow or deny
 
 The server-side authorization layer is the security boundary; hiding a UI control does not grant or revoke permission.
 
-## Evidence & Integrity
+## Investigation & Evidence Management
 
-Important documents and evidence use SHA-256 integrity metadata. Evidence custody transitions are recorded as ordered events, and custody protections prevent silent alteration of the chain.
+EVIDENTIA supports case-centric organization of documents and evidence. Authorized users can work with case assignments, evidence records, custody transitions, document versions, audit events, and controlled sharing.
+
+Important evidence records use SHA-256 integrity metadata. Evidence custody transitions are recorded as ordered events, helping provide a traceable chain of handling.
 
 ## Digital Signatures
 
@@ -156,29 +170,33 @@ SecureCloudStorage/
 
 ## Development & Version Control
 
-The project follows the PDP workflow:
+The project follows a controlled PDP workflow:
 
 ```text
-Issue
+Requirement
   ↓
 Feature / security branch
   ↓
 Development
   ↓
-Testing
+Local testing
   ↓
 Security review
   ↓
 Pull request
   ↓
+CI validation
+  ↓
 Review / approval gate
   ↓
 Merge
   ↓
-Tag / release
+Production deployment
+  ↓
+Validation
 ```
 
-`main` is intended to remain the stable integration branch. PS-26190 work was developed through the dedicated development line and phase-specific branches before final integration.
+`main` is intended to remain the stable integration branch. Feature and security work is developed separately, validated, and then integrated through controlled version management.
 
 ## Data Privacy Rule
 
@@ -226,15 +244,19 @@ This is an educational/project implementation and has not been represented as a 
 
 ## Documentation
 
-- `docs/PS26190_COMPLIANCE_MATRIX.md` — final PDP compliance/evidence matrix
-- `DEVELOPMENT_LOG.md` — phase history and completion boundaries
+- `DEVELOPMENT_LOG.md` — development history and completion boundaries
 - `CHANGELOG.md` — project changes
 - `SECURITY.md` — security and data-handling policy
 - `TECHNOLOGY_DECISIONS.md` — free/open-source technology policy and decisions
-- `docs/PHASE10_RBAC_MATRIX.md` — Phase 10 authorization matrix
+- `docs/PHASE10_RBAC_MATRIX.md` — authorization matrix
 - `docs/PHASE9_BACKUP_RECOVERY.md` — backup/restore design and testing
 - `docs/PHASE6_DIGITAL_SIGNATURES.md` — digital-signature implementation
 - `docs/PHASE5_EVIDENCE_CHAIN_OF_CUSTODY.md` — evidence/custody implementation
+
+## Project Links
+
+- **Live Demo:** https://secure-cloud-storage-nine.vercel.app
+- **Source Code:** https://github.com/1Y20ash/SecureCloudStorage
 
 ## Author
 
@@ -243,5 +265,3 @@ This is an educational/project implementation and has not been represented as a 
 Computer Science & Engineering (AI/ML) Student
 
 - GitHub: https://github.com/1Y20ash
-- Project: https://github.com/1Y20ash/SecureCloudStorage
-- Live Demo: https://secure-cloud-storage-nine.vercel.app
