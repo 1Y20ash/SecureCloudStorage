@@ -1,7 +1,7 @@
 {
-  "name": "SecureVault — Private Cloud Vault",
-  "short_name": "SecureVault",
-  "description": "Privacy-first cloud file storage with AES-256-GCM authenticated encryption.",
+  "name": "EVIDENTIA — Secure Digital Document Management System",
+  "short_name": "EVIDENTIA",
+  "description": "Secure digital document management for legal and investigation workflows with AES-256-GCM protection, integrity controls, access management, and auditable document handling.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
